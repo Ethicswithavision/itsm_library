@@ -1,0 +1,29 @@
+// use_existing_agent{
+//   scm_checkout()  
+//   deploy()
+// }
+
+
+pipeline {
+    agent { label "iac-build-agent" }
+    environment {
+            TF_IN_AUTOMATION = 'true'
+            // TF_CLI_CONFIG_FILE = credentials('tf_nonprod_creds')
+    }
+
+    stages {
+        stage('cd') {
+            steps {
+                pre_deploy()
+                deploy()
+                itsm_deploy()
+            }
+        }
+        // stage('CI Creation') {
+        //     steps {
+        //         itsm_deploy()
+        //     }
+        // }
+    }
+    
+}
