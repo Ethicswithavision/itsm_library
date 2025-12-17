@@ -1,5 +1,4 @@
 
-# ECR–Nova Integration MVP: Discussion Points Explained
 
 **Document Purpose:** This document provides detailed explanations for each decision and discussion point from the ECR Enablement MVP planning sessions. Use this as a reference when discussing with the team.
 
