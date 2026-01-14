@@ -1,29 +1,22 @@
-// use_existing_agent{
-//   scm_checkout()  
-//   deploy()
-// }
+Create a Mermaid flowchart that shows a clean Backstage model with two separate catalog items:
 
+1) A Backstage Component representing a service source repository
+   - Contains application code
+   - Contains a Dockerfile
+   - Contains CI pipeline configuration
+   - Lives in Bitbucket
 
-pipeline {
-    agent { label "iac-build-agent" }
-    environment {
-            TF_IN_AUTOMATION = 'true'
-            // TF_CLI_CONFIG_FILE = credentials('tf_nonprod_creds')
-    }
+2) A Backstage Resource representing an AWS ECR repository
+   - Used only for storing container images
+   - No application source code
 
-    stages {
-        stage('cd') {
-            steps {
-                pre_deploy()
-                deploy()
-                itsm_deploy()
-            }
-        }
-        // stage('CI Creation') {
-        //     steps {
-        //         itsm_deploy()
-        //     }
-        // }
-    }
-    
-}
+Flow requirements:
+- Backstage Catalog contains both the Component and the Resource
+- The Component is linked to the ECR Resource (dependsOn / produces relationship)
+- Bitbucket hosts the source repository for the Component
+- CI pipeline builds the image from the Component’s repo
+- The pipeline pushes the image to the ECR Resource
+- EKS later pulls images from ECR (read-only relationship)
+
+Use clear labels and directional arrows.
+Keep Component and Resource as separate objects but visually connected.
