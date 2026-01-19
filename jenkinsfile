@@ -1,22 +1,493 @@
-Create a Mermaid flowchart that shows a clean Backstage model with two separate catalog items:
+# Q1 2026 CCE | K8s Upgrade Automation Investigation
+## User Stories Breakdown
 
-1) A Backstage Component representing a service source repository
-   - Contains application code
-   - Contains a Dockerfile
-   - Contains CI pipeline configuration
-   - Lives in Bitbucket
+**EPIC:** Q1 2026 CCE | K8s upgrade automation investigation (CAB-96)
 
-2) A Backstage Resource representing an AWS ECR repository
-   - Used only for storing container images
-   - No application source code
+---
 
-Flow requirements:
-- Backstage Catalog contains both the Component and the Resource
-- The Component is linked to the ECR Resource (dependsOn / produces relationship)
-- Bitbucket hosts the source repository for the Component
-- CI pipeline builds the image from the Component’s repo
-- The pipeline pushes the image to the ECR Resource
-- EKS later pulls images from ECR (read-only relationship)
+## Phase 1 - Tool Research & Requirements Definition (3 weeks, February)
 
-Use clear labels and directional arrows.
-Keep Component and Resource as separate objects but visually connected.
+### Research Stories
+
+**Story 1.1: Terraform AWS EKS Module Research**
+- **As a** Platform Engineer
+- **I want to** research Terraform AWS EKS module automation capabilities for Kubernetes upgrades
+- **So that** I can understand if it meets our automation requirements
+- **Acceptance Criteria:**
+  - Document Terraform EKS module upgrade capabilities
+  - Identify supported upgrade scenarios (control plane, node groups, add-ons)
+  - Document limitations and constraints
+  - Create proof of capability examples
+- **Effort:** 8 hours
+
+**Story 1.2: ArgoCD GitOps Upgrade Workflows Research**
+- **As a** Platform Engineer
+- **I want to** investigate ArgoCD GitOps-based upgrade workflow capabilities
+- **So that** I can evaluate GitOps approaches for K8s version management
+- **Acceptance Criteria:**
+  - Document ArgoCD upgrade automation patterns
+  - Identify integration points with EKS
+  - Document rollback capabilities
+  - Create example workflow diagrams
+- **Effort:** 8 hours
+
+**Story 1.3: Custom Scripting Frameworks Research**
+- **As a** Platform Engineer
+- **I want to** research custom scripting and orchestration frameworks for K8s upgrades
+- **So that** I can understand options for building tailored automation solutions
+- **Acceptance Criteria:**
+  - Document available orchestration frameworks (Ansible, Python, etc.)
+  - Identify common patterns and libraries
+  - Document community best practices
+  - Assess customization capabilities
+- **Effort:** 6 hours
+
+**Story 1.4: Diagnostic and Compatibility Tools Investigation**
+- **As a** Platform Engineer
+- **I want to** investigate diagnostic and compatibility checking tools
+- **So that** I can identify pre-upgrade validation capabilities
+- **Acceptance Criteria:**
+  - Document available compatibility checking tools
+  - Identify API deprecation detection tools
+  - Research add-on compatibility validation
+  - Document integration approaches
+- **Effort:** 3 hours
+
+### Requirements Definition Stories
+
+**Story 1.5: Pre-Upgrade Validation Requirements**
+- **As a** Platform Team Lead
+- **I want to** define enterprise requirements for pre-upgrade validation
+- **So that** upgrades don't break existing workloads
+- **Acceptance Criteria:**
+  - Document API deprecation check requirements
+  - Define add-on compatibility validation needs
+  - Specify configuration validation requirements
+  - Include workload impact assessment criteria
+- **Effort:** 5 hours
+
+**Story 1.6: Upgrade Orchestration Requirements**
+- **As a** Platform Team Lead
+- **I want to** define requirements for upgrade orchestration
+- **So that** upgrades are executed safely and systematically
+- **Acceptance Criteria:**
+  - Document control plane upgrade requirements
+  - Define node group upgrade sequencing needs
+  - Specify add-on update requirements
+  - Include coordination requirements for multi-cluster scenarios
+- **Effort:** 5 hours
+
+**Story 1.7: Post-Upgrade Validation Requirements**
+- **As a** Platform Team Lead
+- **I want to** define post-upgrade validation and testing requirements
+- **So that** we can verify upgrade success before declaring completion
+- **Acceptance Criteria:**
+  - Document cluster health check requirements
+  - Define workload validation criteria
+  - Specify integration testing needs
+  - Include smoke test requirements
+- **Effort:** 3 hours
+
+**Story 1.8: Rollback and Failure Handling Requirements**
+- **As a** Platform Team Lead
+- **I want to** define rollback capabilities and failure handling requirements
+- **So that** we can recover from failed upgrades safely
+- **Acceptance Criteria:**
+  - Document rollback trigger conditions
+  - Define rollback procedures for different failure scenarios
+  - Specify failure notification requirements
+  - Include recovery time objectives
+- **Effort:** 5 hours
+
+**Story 1.9: Security and Compliance Requirements**
+- **As a** Security Engineer
+- **I want to** define security and compliance requirements for upgrade automation
+- **So that** automated upgrades meet enterprise security standards
+- **Acceptance Criteria:**
+  - Document audit logging requirements
+  - Define compliance tracking needs
+  - Specify access control requirements
+  - Include security validation criteria
+- **Effort:** 5 hours
+
+**Story 1.10: Auditability Requirements**
+- **As a** Compliance Officer
+- **I want to** define audit trail and logging requirements
+- **So that** all upgrade activities are traceable and auditable
+- **Acceptance Criteria:**
+  - Document audit trail requirements
+  - Define logging standards
+  - Specify retention requirements
+  - Include reporting needs
+- **Effort:** 3 hours
+
+**Story 1.11: Multi-Cluster Coordination Requirements**
+- **As a** Platform Team Lead
+- **I want to** define multi-cluster coordination and phased rollout requirements
+- **So that** we can manage upgrades across our entire cluster portfolio safely
+- **Acceptance Criteria:**
+  - Document phased rollout strategy requirements
+  - Define cluster grouping criteria
+  - Specify coordination mechanisms
+  - Include blast radius limitations
+- **Effort:** 5 hours
+
+**Story 1.12: Tool Comparison Matrix**
+- **As a** Platform Team Lead
+- **I want to** create a comparison matrix of researched tools
+- **So that** we can objectively evaluate options against our requirements
+- **Acceptance Criteria:**
+  - Create matrix comparing all researched approaches
+  - Include scoring against enterprise requirements
+  - Document gaps for each approach
+  - Provide pros/cons analysis
+- **Effort:** 8 hours
+
+**Story 1.13: Approach Selection**
+- **As a** Platform Team Lead
+- **I want to** select 2-3 approaches for deeper investigation
+- **So that** we can focus proof-of-concept efforts on most promising solutions
+- **Acceptance Criteria:**
+  - Document selected approaches with justification
+  - Identify key decision factors
+  - Get stakeholder alignment on selection
+  - Define success criteria for POC phase
+- **Effort:** 3 hours
+
+---
+
+## Phase 2 - Proof-of-Concept Design & Implementation (4 weeks, late February - March)
+
+### Design Stories
+
+**Story 2.1: Automation Workflow Design**
+- **As a** Platform Architect
+- **I want to** design the automation workflow for selected approaches
+- **So that** we have a blueprint for POC implementation
+- **Acceptance Criteria:**
+  - Create workflow diagrams for each selected approach
+  - Document component interactions
+  - Define data flows and state management
+  - Include error handling flows
+- **Effort:** 12 hours
+
+**Story 2.2: Pre-Upgrade Validation Automation Design**
+- **As a** Platform Architect
+- **I want to** design automated pre-upgrade checks and validation
+- **So that** we can prevent upgrades that would cause failures
+- **Acceptance Criteria:**
+  - Design API deprecation checking automation
+  - Design add-on compatibility validation
+  - Design configuration validation checks
+  - Create validation reporting mechanism
+- **Effort:** 8 hours
+
+**Story 2.3: Upgrade Orchestration and Sequencing Design**
+- **As a** Platform Architect
+- **I want to** design upgrade orchestration and sequencing logic
+- **So that** upgrades follow the correct order and timing
+- **Acceptance Criteria:**
+  - Design control plane upgrade orchestration
+  - Design node group upgrade sequencing
+  - Design add-on update coordination
+  - Include wait/verification steps
+- **Effort:** 10 hours
+
+**Story 2.4: Version Management Design**
+- **As a** Platform Architect
+- **I want to** design add-on version management and update automation
+- **So that** add-ons remain compatible during K8s upgrades
+- **Acceptance Criteria:**
+  - Design version compatibility checking
+  - Design automated version selection
+  - Design update sequencing
+  - Include rollback considerations
+- **Effort:** 6 hours
+
+**Story 2.5: Post-Upgrade Validation Framework Design**
+- **As a** Platform Architect
+- **I want to** design the post-upgrade validation framework
+- **So that** we can automatically verify upgrade success
+- **Acceptance Criteria:**
+  - Design health check automation
+  - Design workload validation tests
+  - Design integration test framework
+  - Include success/failure criteria
+- **Effort:** 8 hours
+
+**Story 2.6: Rollback Procedure Design**
+- **As a** Platform Architect
+- **I want to** design automated rollback procedures and failure recovery
+- **So that** we can automatically recover from failed upgrades
+- **Acceptance Criteria:**
+  - Design rollback trigger mechanisms
+  - Design rollback execution workflows
+  - Design state recovery procedures
+  - Include notification and alerting
+- **Effort:** 10 hours
+
+### Implementation Stories
+
+**Story 2.7: Test Environment Setup**
+- **As a** DevOps Engineer
+- **I want to** create isolated test EKS clusters representing production configurations
+- **So that** we can safely test automation without impacting production
+- **Acceptance Criteria:**
+  - Create 2-3 test clusters with different configurations
+  - Replicate production workload patterns
+  - Set up monitoring and logging
+  - Document cluster configurations
+- **Effort:** 12 hours
+
+**Story 2.8: Pre-Upgrade Automation Implementation**
+- **As a** DevOps Engineer
+- **I want to** implement automated pre-upgrade checks and validation
+- **So that** we can validate readiness before starting upgrades
+- **Acceptance Criteria:**
+  - Implement API deprecation checking
+  - Implement add-on compatibility validation
+  - Implement configuration validation
+  - Create validation reports
+- **Effort:** 16 hours
+
+**Story 2.9: Upgrade Orchestration Implementation**
+- **As a** DevOps Engineer
+- **I want to** develop automation scripts/workflows for cluster upgrades
+- **So that** we can execute upgrades programmatically
+- **Acceptance Criteria:**
+  - Implement control plane upgrade automation
+  - Implement node group upgrade automation
+  - Implement add-on update automation
+  - Include progress tracking
+- **Effort:** 20 hours
+
+**Story 2.10: Upgrade Scenario Testing - Success Path**
+- **As a** DevOps Engineer
+- **I want to** test successful upgrade scenarios
+- **So that** I can verify the automation works for happy path cases
+- **Acceptance Criteria:**
+  - Execute upgrades on test clusters
+  - Verify all components upgraded successfully
+  - Validate workload continuity
+  - Document execution metrics (time, manual intervention needed)
+- **Effort:** 10 hours
+
+**Story 2.11: Upgrade Scenario Testing - Failure Handling**
+- **As a** DevOps Engineer
+- **I want to** test failure scenarios and rollback capabilities
+- **So that** I can verify the automation handles failures gracefully
+- **Acceptance Criteria:**
+  - Simulate various failure scenarios
+  - Verify rollback execution
+  - Validate failure detection and alerting
+  - Document recovery procedures
+- **Effort:** 12 hours
+
+**Story 2.12: Automation Execution Metrics**
+- **As a** DevOps Engineer
+- **I want to** measure automation execution time and manual intervention requirements
+- **So that** we can quantify efficiency gains
+- **Acceptance Criteria:**
+  - Capture end-to-end execution times
+  - Document manual intervention points
+  - Compare to baseline manual process
+  - Calculate efficiency improvements
+- **Effort:** 5 hours
+
+### Validation Stories
+
+**Story 2.13: Security Controls Validation**
+- **As a** Security Engineer
+- **I want to** validate automation against security and compliance controls
+- **So that** automated upgrades meet security requirements
+- **Acceptance Criteria:**
+  - Verify audit logging completeness
+  - Validate access controls
+  - Review compliance with security standards
+  - Document security findings
+- **Effort:** 8 hours
+
+**Story 2.14: Audit Trail Validation**
+- **As a** Security Engineer
+- **I want to** validate audit trail and logging capabilities
+- **So that** all actions are properly tracked and auditable
+- **Acceptance Criteria:**
+  - Verify all actions are logged
+  - Validate log completeness and accuracy
+  - Test log retention and retrieval
+  - Document audit trail findings
+- **Effort:** 5 hours
+
+**Story 2.15: Error Handling and Recovery Validation**
+- **As a** Platform Engineer
+- **I want to** validate error handling and recovery mechanisms
+- **So that** the automation degrades gracefully under failure conditions
+- **Acceptance Criteria:**
+  - Test various error scenarios
+  - Verify error detection and reporting
+  - Validate recovery procedures
+  - Document failure modes
+- **Effort:** 8 hours
+
+**Story 2.16: Operational Complexity Assessment**
+- **As a** Platform Team Lead
+- **I want to** assess operational complexity and maintenance burden
+- **So that** we understand the ongoing operational impact
+- **Acceptance Criteria:**
+  - Document operational procedures required
+  - Assess troubleshooting complexity
+  - Evaluate maintenance requirements
+  - Compare to current manual processes
+- **Effort:** 5 hours
+
+---
+
+## Phase 3 - Documentation & Roadmap (2 weeks, late March)
+
+### Documentation Stories
+
+**Story 3.1: Investigation Findings Documentation**
+- **As a** Platform Team Lead
+- **I want to** document all investigation findings and technical analysis
+- **So that** stakeholders understand what was learned
+- **Acceptance Criteria:**
+  - Document tool research findings
+  - Include technical analysis of each approach
+  - Document test results and metrics
+  - Include lessons learned
+- **Effort:** 10 hours
+
+**Story 3.2: Tool Comparison Documentation**
+- **As a** Platform Team Lead
+- **I want to** create comprehensive comparison of evaluated approaches
+- **So that** decision-makers can understand trade-offs
+- **Acceptance Criteria:**
+  - Complete detailed comparison matrix
+  - Document strengths and weaknesses
+  - Include cost-benefit analysis
+  - Provide clear recommendations
+- **Effort:** 8 hours
+
+**Story 3.3: Gap Analysis Documentation**
+- **As a** Platform Architect
+- **I want to** develop gap analysis identifying custom development needs
+- **So that** we understand what additional work is required
+- **Acceptance Criteria:**
+  - Document gaps in each approach
+  - Identify custom development requirements
+  - Estimate effort for gap closure
+  - Prioritize gap remediation
+- **Effort:** 8 hours
+
+**Story 3.4: Implementation Recommendations**
+- **As a** Platform Architect
+- **I want to** develop implementation recommendations with pros/cons analysis
+- **So that** the team has clear guidance for moving forward
+- **Acceptance Criteria:**
+  - Provide recommended approach with justification
+  - Document pros and cons of recommendation
+  - Include alternative approaches
+  - Address key decision criteria
+- **Effort:** 6 hours
+
+### Roadmap Stories
+
+**Story 3.5: Q2-Q4 2026 Production Roadmap**
+- **As a** Platform Team Lead
+- **I want to** design Q2-Q4 2026 roadmap for production automation deployment
+- **So that** we have a clear path to production implementation
+- **Acceptance Criteria:**
+  - Create phased deployment plan
+  - Define milestones and deliverables
+  - Identify dependencies and risks
+  - Include resource requirements
+- **Effort:** 8 hours
+
+**Story 3.6: Q2 Pilot Deployment Plan**
+- **As a** Platform Team Lead
+- **I want to** define Q2 pilot deployment for few clusters in next release
+- **So that** we can validate the approach with limited production exposure
+- **Acceptance Criteria:**
+  - Select pilot clusters
+  - Define pilot success criteria
+  - Create pilot execution plan
+  - Include monitoring and rollback plans
+- **Effort:** 5 hours
+
+**Story 3.7: Q3 Production Rollout Plan**
+- **As a** Platform Team Lead
+- **I want to** define Q3 production cluster automation with phased rollout
+- **So that** we can safely scale to broader production use
+- **Acceptance Criteria:**
+  - Define rollout phases and groupings
+  - Create phased execution schedule
+  - Include Nova testing integration
+  - Define success metrics per phase
+- **Effort:** 5 hours
+
+**Story 3.8: Q4 Advanced Features Plan**
+- **As a** Platform Team Lead
+- **I want to** plan Q4 advanced features including predictive upgrades and auto-remediation
+- **So that** we can evolve beyond basic automation
+- **Acceptance Criteria:**
+  - Define predictive upgrade capabilities
+  - Plan auto-remediation features
+  - Include Nova integration enhancements
+  - Document technical requirements
+- **Effort:** 5 hours
+
+### Stakeholder Communication Stories
+
+**Story 3.9: Stakeholder Presentation**
+- **As a** Platform Team Lead
+- **I want to** present findings and recommendations to stakeholders
+- **So that** we can get buy-in for production implementation
+- **Acceptance Criteria:**
+  - Create executive summary presentation
+  - Include key findings and metrics
+  - Present recommendations and roadmap
+  - Address stakeholder questions and concerns
+- **Effort:** 8 hours
+
+**Story 3.10: Proof-of-Concept Artifacts Archive**
+- **As a** Platform Engineer
+- **I want to** archive proof-of-concept environments and artifacts
+- **So that** we have reference implementations for production work
+- **Acceptance Criteria:**
+  - Archive test cluster configurations
+  - Save automation scripts and workflows
+  - Document environment setup procedures
+  - Create knowledge transfer materials
+- **Effort:** 5 hours
+
+---
+
+## Summary
+
+**Total Stories:** 53
+**Total Estimated Effort:** ~190 hours
+
+### Phase Breakdown:
+- **Phase 1:** 13 stories (~67 hours)
+- **Phase 2:** 16 stories (~98 hours)
+- **Phase 3:** 10 stories (~68 hours)
+
+### Story Points Recommendation:
+If using Fibonacci sequence (1, 2, 3, 5, 8, 13):
+- 3-5 hours = 2 points
+- 6-8 hours = 3 points
+- 10-12 hours = 5 points
+- 16-20 hours = 8 points
+
+### Dependencies:
+- Phase 2 depends on Phase 1 completion (approach selection)
+- Phase 3 depends on Phase 2 completion (POC results)
+- Within phases, design stories should precede implementation stories
+- Testing stories depend on implementation completion
+
+### Notes for Sprint Planning:
+1. Consider splitting larger stories (16-20 hours) into sub-tasks
+2. Some stories can be parallelized (e.g., research stories in Phase 1)
+3. Plan for demo/review sessions at end of each phase
+4. Include buffer for unexpected complexity or rework
+5. Assign stories based on team member expertise (security, architecture, implementation)
