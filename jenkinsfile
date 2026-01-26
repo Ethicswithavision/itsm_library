@@ -1,306 +1,40 @@
-# Terraform Cloud Dynamic AWS Credentials for EKS
+You are a senior platform/IaC engineer. I have an EKS Terraform module checked out locally on my laptop. I am migrating AWS authentication from static credentials (Jenkins IAM user / access keys) to Terraform Cloud Dynamic Credentials using AWS IAM OIDC (TFC run role).
 
-## Architecture Diagram
+TASK:
+1) Inspect this repo/module and identify every place that controls AWS authentication and role assumption:
+   - provider "aws" blocks (and aliases)
+   - any assume_role / role_arn / external_id usage
+   - any references to access_key/secret_key, shared_credentials_file, profile, env vars
+   - any modules/resources creating IAM roles, policies, or trust relationships for Terraform execution
+   - any references to Terraform Cloud variables like TFC_AWS_PROVIDER_AUTH or TFC_AWS_RUN_ROLE_ARN
+   - any docs/examples/templates that show how to configure workspaces
 
-```mermaid
-flowchart TB
-    subgraph TFC["Terraform Cloud (app.terraform.io)"]
-        WS["Workspace: slf-eks-nonprod-app1"]
-        
-        subgraph WSVars["Workspace Variables"]
-            VAR1["TFC_AWS_PROVIDER_AUTH = true"]
-            VAR2["TFC_AWS_RUN_ROLE_ARN = <br/>arn:aws:iam::123456789:role/<br/>terraform_GTOE_EKS_nonprod"]
-        end
-        
-        OIDC["OIDC Provider<br/>app.terraform.io"]
-        
-        WS --> WSVars
-        WS --> OIDC
-    end
-    
-    subgraph AWS["AWS Workload Account"]
-        subgraph IAM["IAM Identity & Access"]
-            ROLE["IAM Role<br/>terraform_GTOE_EKS_nonprod"]
-            
-            subgraph Trust["Trust Policy"]
-                COND1["Condition: TFC Organization"]
-                COND2["Condition: TFC Project = nonprod"]
-                COND3["Condition: Workspace = slf-eks-nonprod-*"]
-            end
-            
-            subgraph Perms["Permissions Policy"]
-                P1["EKS: Create/Update/Delete clusters"]
-                P2["EC2: VPC, Subnets, Security Groups"]
-                P3["IAM: Limited role management"]
-                P4["ELB, ASG, CloudWatch, Logs"]
-                P5["KMS, ECR"]
-            end
-            
-            ROLE --> Trust
-            ROLE --> Perms
-        end
-        
-        STS["STS Temporary Credentials<br/>Valid: 15 minutes - 1 hour"]
-        
-        subgraph TFProvider["Terraform AWS Provider"]
-            PROVIDER["AWS Provider<br/>using temp credentials"]
-        end
-        
-        subgraph Resources["EKS Resources"]
-            CLUSTER["EKS Cluster"]
-            NODES["Node Groups"]
-            ADDONS["Add-ons"]
-            CONTROL["Control Plane"]
-        end
-    end
-    
-    %% Flow connections
-    OIDC -->|"1. Request authentication"| ROLE
-    ROLE -->|"2. Validate trust conditions"| Trust
-    Trust -->|"3. Trust validated ✓"| STS
-    STS -->|"4. Issue temporary credentials"| PROVIDER
-    PROVIDER -->|"5. Execute Terraform operations"| CLUSTER
-    PROVIDER --> NODES
-    PROVIDER --> ADDONS
-    PROVIDER --> CONTROL
-    
-    %% Security boundary
-    style TFC fill:#e1f5ff,stroke:#0066cc,stroke-width:3px
-    style AWS fill:#fff4e1,stroke:#ff9900,stroke-width:3px
-    style Trust fill:#ffe1e1,stroke:#cc0000,stroke-width:2px
-    style STS fill:#e1ffe1,stroke:#00cc00,stroke-width:2px
-    
-    %% Labels
-    classDef secBoundary fill:#f9f9f9,stroke:#666,stroke-width:2px,stroke-dasharray: 5 5
-```
+2) Output a change plan with EXACT file paths and line-level guidance under these headings:
+   A. What to remove (static creds paths)
+   B. What to add/modify (OIDC + run role pattern)
+   C. What stays unchanged (EKS IRSA OIDC provider etc.)
+   D. Workspace naming / condition bindings that must be matched (org/project/workspace claims)
+   E. Risk checklist (what breaks if missed)
 
-## Authentication Flow Sequence
+3) For IAM trust: verify whether this module owns the “terraform execution role” in workload accounts.
+   - If the role is created outside (service catalog), then output only the required INPUTS/variables and how the module consumes role ARN.
+   - If the role is created inside, then propose the trust policy structure needed for Terraform Cloud OIDC with conditions for:
+       - Terraform Cloud organization
+       - Terraform Cloud project
+       - Terraform Cloud workspace name pattern (prefix + wildcard)
+     (Do NOT invent values; show placeholders.)
 
-```mermaid
-sequenceDiagram
-    participant WS as Terraform Cloud<br/>Workspace
-    participant OIDC as TFC OIDC Provider<br/>app.terraform.io
-    participant IAM as AWS IAM
-    participant STS as AWS STS
-    participant TF as Terraform AWS<br/>Provider
-    participant EKS as EKS Cluster
+4) Create a Mermaid diagram that shows:
+   - Terraform Cloud Workspace -> OIDC -> AWS STS AssumeRoleWithWebIdentity -> IAM Role -> AWS APIs (EKS/EC2/IAM/etc.)
+   - Clearly separate “Terraform Cloud OIDC provider in IAM” vs “EKS cluster OIDC provider for IRSA” to avoid confusion
+   - Include boxes for “Repo/module changes” showing which files/resources are affected
 
-    Note over WS: Workspace Variables:<br/>TFC_AWS_PROVIDER_AUTH=true<br/>TFC_AWS_RUN_ROLE_ARN=arn:...
-    
-    WS->>OIDC: 1. Initiate OIDC authentication
-    OIDC->>IAM: 2. Request to assume role<br/>terraform_GTOE_EKS_nonprod
-    
-    Note over IAM: Trust Policy Validation
-    IAM->>IAM: 3a. Check TFC Organization
-    IAM->>IAM: 3b. Check TFC Project = nonprod
-    IAM->>IAM: 3c. Check Workspace = slf-eks-nonprod-*
-    
-    alt Trust conditions satisfied
-        IAM->>STS: 4. Generate temporary credentials
-        STS-->>TF: 5. Return STS credentials<br/>(valid 15min - 1hr)
-        
-        Note over TF: Terraform execution begins
-        TF->>EKS: 6. Create/Update/Upgrade EKS Cluster
-        TF->>EKS: 7. Manage Node Groups
-        TF->>EKS: 8. Update Add-ons
-        EKS-->>TF: 9. Operation complete
-        TF-->>WS: 10. Terraform run complete
-        
-    else Trust conditions NOT satisfied
-        IAM-->>OIDC: ❌ Access Denied
-        OIDC-->>WS: ❌ Authentication failed
-    end
-```
+OUTPUT FORMAT:
+- Start with a repo scan checklist (what you looked for)
+- Then the change plan (A–E) with file paths
+- Then Mermaid diagrams:
+   Diagram 1: Auth flow (sequence diagram)
+   Diagram 2: Module impact map (flowchart)
+- Keep it specific to this module; if you can’t find something, explicitly say “not found”.
 
-## Detailed Component Breakdown
-
-### Terraform Cloud Workspace Configuration
-
-**Required Variables:**
-```hcl
-# Variable 1: Enable OIDC authentication
-TFC_AWS_PROVIDER_AUTH = true
-
-# Variable 2: Specify IAM role to assume
-TFC_AWS_RUN_ROLE_ARN = "arn:aws:iam::123456789012:role/terraform_GTOE_EKS_nonprod"
-```
-
-**Workspace Naming Convention:**
-- Pattern: `slf-eks-<ENV>-<APP_NAME>`
-- Examples:
-  - `slf-eks-nonprod-app1`
-  - `slf-eks-nonprod-app2`
-  - `slf-eks-prod-app1`
-
-### IAM Role Design
-
-**Role Naming Convention:**
-```
-terraform_<SERVICE_OWNER_ID>_EKS_<ENV>
-
-Examples:
-- terraform_GTOE_EKS_nonprod
-- terraform_GTOE_EKS_prod
-```
-
-**Trust Policy Structure:**
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Federated": "arn:aws:iam::123456789012:oidc-provider/app.terraform.io"
-      },
-      "Action": "sts:AssumeRoleWithWebIdentity",
-      "Condition": {
-        "StringEquals": {
-          "app.terraform.io:aud": "aws.workload.identity"
-        },
-        "StringLike": {
-          "app.terraform.io:sub": [
-            "organization:YOUR_TFC_ORG:project:nonprod:workspace:slf-eks-nonprod-*"
-          ]
-        }
-      }
-    }
-  ]
-}
-```
-
-**Permissions Policy (Summarized):**
-```json
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "eks:*",
-        "ec2:CreateVpc",
-        "ec2:CreateSubnet",
-        "ec2:CreateSecurityGroup",
-        "ec2:Describe*",
-        "elasticloadbalancing:*",
-        "autoscaling:*",
-        "iam:CreateRole",
-        "iam:AttachRolePolicy",
-        "iam:PassRole",
-        "logs:CreateLogGroup",
-        "logs:PutRetentionPolicy",
-        "cloudwatch:PutMetricData",
-        "kms:Decrypt",
-        "kms:CreateGrant",
-        "ecr:GetAuthorizationToken"
-      ],
-      "Resource": "*"
-    }
-  ]
-}
-```
-
-### Security Boundaries
-
-**Identity Flow:**
-1. **Terraform Cloud** → OIDC Provider (app.terraform.io)
-2. **OIDC Provider** → AWS IAM Role (with trust conditions)
-3. **IAM Role** → STS Temporary Credentials
-4. **Temporary Credentials** → Terraform AWS Provider
-5. **AWS Provider** → EKS Resources
-
-**Trust Conditions Enforce:**
-- ✅ Correct Terraform Cloud Organization
-- ✅ Correct Project (prod / nonprod isolation)
-- ✅ Workspace name matches expected prefix
-- ✅ Time-limited access (STS credentials expire)
-
-### Benefits for EKS Automation
-
-**Security:**
-- ❌ No long-lived AWS access keys
-- ✅ Zero-trust, identity-based access
-- ✅ Credentials automatically expire
-- ✅ Audit trail via CloudTrail (which workspace assumed which role)
-
-**Scalability:**
-- ✅ One role per environment (not per workspace)
-- ✅ Workspace prefix matching allows adding new workspaces
-- ✅ Consistent pattern across all EKS workspaces
-
-**Operational:**
-- ✅ Reduced blast radius (workspace isolated by trust policy)
-- ✅ Enables safe EKS lifecycle automation (create, upgrade, destroy)
-- ✅ Foundation for upgrade automation workflows
-
----
-
-## Execution Flow Example
-
-**Scenario: Upgrade EKS cluster in workspace `slf-eks-nonprod-app1`**
-
-1. **Terraform Cloud Workspace** `slf-eks-nonprod-app1` starts a run
-2. Workspace variables configure OIDC: `TFC_AWS_PROVIDER_AUTH=true`
-3. Workspace specifies role: `TFC_AWS_RUN_ROLE_ARN=arn:aws:iam::123456789012:role/terraform_GTOE_EKS_nonprod`
-4. **OIDC Authentication:**
-   - TFC generates identity token for workspace
-   - Token includes: organization, project (nonprod), workspace name
-5. **AWS IAM Trust Validation:**
-   - IAM validates: organization matches
-   - IAM validates: project = "nonprod"
-   - IAM validates: workspace name matches "slf-eks-nonprod-*" ✓
-6. **STS Issues Credentials:**
-   - Temporary credentials valid for 1 hour
-   - Credentials have EKS permissions from role policy
-7. **Terraform Execution:**
-   - AWS provider uses temporary credentials
-   - Runs terraform plan/apply
-   - Upgrades EKS control plane, node groups, add-ons
-8. **Credentials Expire:**
-   - After run completes, credentials automatically expire
-   - Next run generates new temporary credentials
-
----
-
-## Migration Path
-
-**Current State:**
-- Static AWS access keys stored in Terraform Cloud variables
-- Same credentials potentially used across multiple workspaces
-- Keys don't expire (manual rotation required)
-
-**Target State:**
-- No access keys in Terraform Cloud
-- Dynamic, temporary credentials per workspace run
-- Automatic credential expiration
-- Trust policies enforce least-privilege access
-
-**Migration Steps:**
-1. Set up OIDC provider in each AWS account
-2. Create IAM roles with trust policies
-3. Update workspace variables (add TFC_AWS_PROVIDER_AUTH and TFC_AWS_RUN_ROLE_ARN)
-4. Test in nonprod workspace
-5. Validate upgrade operations work
-6. Roll out to remaining workspaces
-7. Remove static access keys
-
----
-
-## Outcome
-
-✅ **Zero-trust foundation for EKS automation**
-- No AWS access keys stored anywhere
-- Access strictly scoped to workspace, project, environment
-- Temporary credentials reduce security risk
-
-✅ **Scalable EKS lifecycle management**
-- Create new clusters
-- Upgrade existing clusters (K8s versions, add-ons)
-- Destroy decommissioned clusters
-- All operations use same secure authentication pattern
-
-✅ **Foundation for upgrade automation**
-- Secure credential model for automation workflows
-- Clear workspace-to-role mapping
-- Audit trail for compliance
-- Reduced operational overhead
+NOW WAIT FOR ME TO PASTE THE REPO STRUCTURE OR FILE CONTENTS IF YOU NEED IT, but first tell me which files you want to see (top 5).
