@@ -1,40 +1,20 @@
-You are a senior platform/IaC engineer. I have an EKS Terraform module checked out locally on my laptop. I am migrating AWS authentication from static credentials (Jenkins IAM user / access keys) to Terraform Cloud Dynamic Credentials using AWS IAM OIDC (TFC run role).
-
-TASK:
-1) Inspect this repo/module and identify every place that controls AWS authentication and role assumption:
-   - provider "aws" blocks (and aliases)
-   - any assume_role / role_arn / external_id usage
-   - any references to access_key/secret_key, shared_credentials_file, profile, env vars
-   - any modules/resources creating IAM roles, policies, or trust relationships for Terraform execution
-   - any references to Terraform Cloud variables like TFC_AWS_PROVIDER_AUTH or TFC_AWS_RUN_ROLE_ARN
-   - any docs/examples/templates that show how to configure workspaces
-
-2) Output a change plan with EXACT file paths and line-level guidance under these headings:
-   A. What to remove (static creds paths)
-   B. What to add/modify (OIDC + run role pattern)
-   C. What stays unchanged (EKS IRSA OIDC provider etc.)
-   D. Workspace naming / condition bindings that must be matched (org/project/workspace claims)
-   E. Risk checklist (what breaks if missed)
-
-3) For IAM trust: verify whether this module owns the “terraform execution role” in workload accounts.
-   - If the role is created outside (service catalog), then output only the required INPUTS/variables and how the module consumes role ARN.
-   - If the role is created inside, then propose the trust policy structure needed for Terraform Cloud OIDC with conditions for:
-       - Terraform Cloud organization
-       - Terraform Cloud project
-       - Terraform Cloud workspace name pattern (prefix + wildcard)
-     (Do NOT invent values; show placeholders.)
-
-4) Create a Mermaid diagram that shows:
-   - Terraform Cloud Workspace -> OIDC -> AWS STS AssumeRoleWithWebIdentity -> IAM Role -> AWS APIs (EKS/EC2/IAM/etc.)
-   - Clearly separate “Terraform Cloud OIDC provider in IAM” vs “EKS cluster OIDC provider for IRSA” to avoid confusion
-   - Include boxes for “Repo/module changes” showing which files/resources are affected
-
-OUTPUT FORMAT:
-- Start with a repo scan checklist (what you looked for)
-- Then the change plan (A–E) with file paths
-- Then Mermaid diagrams:
-   Diagram 1: Auth flow (sequence diagram)
-   Diagram 2: Module impact map (flowchart)
-- Keep it specific to this module; if you can’t find something, explicitly say “not found”.
-
-NOW WAIT FOR ME TO PASTE THE REPO STRUCTURE OR FILE CONTENTS IF YOU NEED IT, but first tell me which files you want to see (top 5).
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "Federated": "arn:aws:iam::514673818466:oidc-provider/app.terraform.io"
+      },
+      "Action": "sts:AssumeRoleWithWebIdentity",
+      "Condition": {
+        "StringEquals": {
+          "app.terraform.io:aud": "aws.workload.identity"
+        },
+        "StringLike": {
+          "app.terraform.io:sub": "organization:slf-nonprod:project:IT-DYNAMIC-CREDS:workspace:*"
+        }
+      }
+    }
+  ]
+}
