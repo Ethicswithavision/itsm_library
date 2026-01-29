@@ -1,26 +1,76 @@
-You are a senior Terraform and AWS expert.
+Minutes – ECR Image Build + Nova Integration Discussion
 
-I am working on a Terraform monorepo that deploys EKS using a wrapper/root module that calls multiple child modules. We are planning to upgrade the AWS provider to hashicorp/aws v6.
+Date: (add date)
+Attendees: Sandeep, Pradeep, Felix, Reza (mentioned), Shraman/Matt (referenced), AOS Utilities (Greg/Rob mentioned)
 
-Your task is to analyze this repository only for provider compatibility, not functionality changes yet.
+1) Context / Goal
+	•	Team is aligning on how consumers will build and publish container images to ECR and how much of that experience should live in Nova/Backstage.
+	•	Two tracks are in flight:
+	1.	ECR repository creation (Service Catalog/Terraform module work – Felix)
+	2.	Image build pipeline (Jenkins-based pipeline – Felix pipeline being leveraged; Reza/Pradeep involved)
 
-Please do the following:
-	1.	Scan all Terraform files (versions.tf, providers.tf, *.tf) and list every required_providers block that references hashicorp/aws.
-	2.	Identify any version constraints that would block or conflict with AWS provider v6 (for example < 6.0, ~> 5.x, pinned versions, etc.).
-	3.	Check whether a .terraform.lock.hcl file exists and whether it pins the AWS provider to a pre-v6 version.
-	4.	Identify Terraform resources and data sources that are commonly impacted by AWS provider v6 upgrades, especially:
-	•	IAM (aws_iam_role, aws_iam_policy_document)
-	•	EKS (aws_eks_cluster, aws_eks_node_group, aws_eks_addon)
-	•	Launch templates
-	•	S3 resources
-	5.	Highlight high-risk modules (wrapper vs child modules) that must be validated or upgraded before the root module can safely move to provider v6.
-	6.	Clearly answer:
-	•	Can the root module be upgraded to AWS provider v6 without breaking child modules?
-	•	If not, which modules are blockers and why?
-	7.	Provide a recommended upgrade strategy, choosing one:
-	•	single PR upgrade
-	•	staged upgrade using a test root/workspace
-	•	required module refactors before provider upgrade
+2) Current Consumer Experience Observed (OpenShift reference)
+	•	OpenShift currently supports a commit/tag-based build experience:
+	•	Commit triggers build (non-release build)
+	•	Tag triggers release build (image is tagged/versioned)
+	•	This is considered a good developer experience and preferred over “manual upload” approaches.
 
-Do NOT assume resources can be destroyed and recreated.
-Focus on compatibility, constraints, and migration safety, not refactoring yet.
+3) Key Discussion Points
+
+A. Where should the build be triggered from?
+	•	Strong preference stated: commit/tag in Git should trigger builds (Git as source of truth).
+	•	Concern raised: “Nova-triggered builds with manual parameters” can feel like click-ops and increases platform glue/API work.
+	•	Agreement that consumers generally should not need Jenkins console access; Nova can provide visibility.
+
+B. Repo access / credentials challenge
+	•	Main blocker: Jenkins needs a secure way to read consumer Bitbucket repos.
+	•	Options discussed:
+	•	Tactical approach: AOS Utilities provides a functional read-only Bitbucket user/key with access to relevant repos/projects; store credential in Vault; Jenkins uses it for checkout.
+	•	Strategic approach: OIDC/JWT-based trust between Jenkins and Vault + per-team secrets/policies (least privilege). Not ready immediately.
+
+C. Rejecting “upload to S3” as source workflow
+	•	Proposal was mentioned earlier (upload tar/zip to S3 then build).
+	•	Strong objection: This breaks Git as source of truth, creates another “book of record”, and complicates audit/provenance.
+	•	Conclusion: S3 upload path should not be the primary approach.
+
+D. Image versioning / rebuild behavior
+	•	Release builds based on tagging was supported.
+	•	Rebuild same version/tag came up (e.g., fix labels/scanning):
+	•	Need clear policy whether tags are immutable or allow re-tag/rebuild (digest tracking recommended).
+	•	Consumers currently sometimes delete tag and rebuild; need guidance.
+
+4) Nova/Backstage Scope Discussion
+	•	Minimum Nova requirement (near-term / demo): enable a consumer-facing experience without requiring Jenkins access:
+	•	View image repository, tags, build history (visibility)
+	•	Provide documentation and clear onboarding steps
+	•	Desired end-state (later):
+	•	One place in Nova for:
+	1.	Create ECR repo (Service Catalog integration)
+	2.	Build/push images (either Git-native or Nova-triggered path—TBD)
+
+5) Timeline / Expectations (as stated in discussion)
+	•	Near term focus: deliver a working pipeline (even if consumer UX is minimal at first).
+	•	Q1/Q2 sequencing implied:
+	•	Q1: Discovery + alignment + working pipeline foundation
+	•	Later: refine Nova UX and standardize onboarding
+
+6) Decisions / Agreements (Provisional)
+	•	Preferred model: Git-based commit/tag triggers; avoid S3 upload workflow.
+	•	Repo access will be pursued via AOS Utilities (functional read-only access) as the tactical unblocker.
+	•	Vault is the preferred storage mechanism for credentials (align with enterprise standard).
+
+7) Risks / Open Questions
+	•	Who owns and operates the functional Bitbucket credential long-term? (rotation, audit, approvals)
+	•	Should tag overwrites be allowed? If yes, what guardrails?
+	•	Do we support both:
+	•	Git-native webhook model (default)
+	•	Nova-triggered build model (exception/future)
+	•	What is the minimal Nova UI/UX required for consumer testing vs internal demo only?
+
+8) Action Items
+	1.	Sandeep to contact Greg / Rob (AOS Utilities) to confirm feasibility of functional read-only Bitbucket access for required repos/projects.
+	2.	Sandeep to share summary/minutes with Shraman, Dan, Matt and align on which model is default for Phase 1.
+	3.	Pradeep + Reza to outline “consumer steps” (onboarding checklist) and required pipeline parameters (repo, branch, dockerfile path, ECR repo, tag).
+	4.	Felix to provide current pipeline details and confirm what parameters/API triggers are supported.
+	5.	Group to decide Phase 1 scope for Nova:
+	•	“Visibility-only + create ECR repo” vs “also trigger build”
