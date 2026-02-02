@@ -1,4 +1,223 @@
 
+🧩 EPIC: EKS Upgrade Discovery, Compatibility & Automation Foundation
+
+Epic Description
+As a platform team, we need clear visibility into Kubernetes, EKS add-ons, and third-party tooling compatibility before automating cluster upgrades, so that upgrades are safe, repeatable, and consumer-friendly.
+
+Business Value
+	•	Reduce upgrade risk and outages
+	•	Reduce manual operational overhead
+	•	Enable future automation with confidence
+	•	Improve consumer trust in platform upgrades
+
+⸻
+
+🟢 STORY 1: Inventory Current Cluster Add-ons & Installation Methods
+
+Story Title
+Discover and document all EKS add-ons and third-party components per cluster
+
+Description
+As a platform engineer,
+I want to identify all add-ons, agents, and tools running in EKS clusters and understand how they were installed,
+So that we can assess upgrade impact and compatibility accurately.
+
+Scope Includes
+	•	EKS managed add-ons
+	•	Helm-installed add-ons
+	•	Terraform-managed resources
+	•	DaemonSets / Operators
+	•	Third-party agents (e.g., monitoring, security, diagnostics)
+
+Out of Scope
+	•	Upgrading components
+	•	Changing installation methods
+
+Acceptance Criteria
+	•	A documented list of add-ons per cluster
+	•	Each add-on includes:
+	•	Name
+	•	Version
+	•	Installation method (EKS add-on / Helm / Terraform / Manual)
+	•	Owning team or vendor (if known)
+	•	Documentation stored in shared platform repo or Confluence
+
+⸻
+
+🟢 STORY 2: Create Kubernetes Version → Add-on Compatibility Matrix (Discovery)
+
+Story Title
+Create compatibility matrix for Kubernetes versions vs add-ons
+
+Description
+As a platform engineer,
+I want to understand which add-ons are required, recommended, or optional for each Kubernetes version,
+So that upgrade decisions are data-driven and predictable.
+
+Acceptance Criteria
+	•	Compatibility matrix created for:
+	•	Current version → Next version (e.g., 1.31 → 1.32)
+	•	Each add-on categorized as:
+	•	Required (must upgrade)
+	•	Recommended (best practice)
+	•	Optional
+	•	Source of compatibility noted (vendor docs, EKS docs, observed behavior)
+	•	Matrix reviewed with at least one senior engineer
+
+⸻
+
+🟢 STORY 3: Research Kubernetes & EKS Upgrade Change Impacts
+
+Story Title
+Analyze Kubernetes and EKS version upgrade changes and risks
+
+Description
+As a platform engineer,
+I want to review upstream Kubernetes and EKS-specific changes for target versions,
+So that we understand API changes, behavior changes, and potential risks.
+
+Acceptance Criteria
+	•	Summary document covering:
+	•	Kubernetes upstream changes
+	•	Deprecated / removed APIs
+	•	EKS-specific behaviors
+	•	Clear notes on:
+	•	Breaking changes
+	•	Non-breaking but risky changes
+	•	Document linked to upgrade playbook
+
+⸻
+
+🟢 STORY 4: Define Pre-Upgrade Cluster Health & Diagnostic Checks
+
+Story Title
+Define mandatory pre-upgrade health and diagnostic checks
+
+Description
+As a platform engineer,
+I want a standard set of health checks before upgrades,
+So that upgrades are only performed on healthy clusters.
+
+Acceptance Criteria
+	•	List of required checks documented, including:
+	•	Cluster health
+	•	Node health
+	•	Add-on health
+	•	Diagnostics status
+	•	Clear pass/fail criteria defined
+	•	Decision rule documented:
+	•	“Fail → upgrade blocked”
+	•	Identified candidates for future automation
+
+⸻
+
+🟢 STORY 5: Document Upgrade Order of Operations (Control Plane → Add-ons)
+
+Story Title
+Document standard EKS upgrade execution order
+
+Description
+As a platform engineer,
+I want a clearly defined order of upgrade steps,
+So that all upgrades follow a consistent and safe process.
+
+Acceptance Criteria
+	•	Documented upgrade order including:
+	1.	Pre-checks
+	2.	Required add-on upgrades
+	3.	Control plane upgrade
+	4.	Node upgrades
+	5.	Post-upgrade validation
+	•	Notes on which steps are version-agnostic
+	•	Reviewed and validated against past upgrade executions
+
+⸻
+
+🟢 STORY 6: Identify Manual Steps Suitable for Automation
+
+Story Title
+Identify manual upgrade steps that can be automated
+
+Description
+As a platform engineer,
+I want to identify repetitive manual tasks during upgrades,
+So that we can prioritize automation effectively.
+
+Acceptance Criteria
+	•	List of manual steps observed during real upgrades
+	•	Each step tagged as:
+	•	Automatable now
+	•	Automatable later
+	•	Must remain manual
+	•	Reason documented for each classification
+	•	Inputs and outputs defined per step
+
+⸻
+
+🟢 STORY 7: Define MVP Automation Scope for Upgrade Workflow
+
+Story Title
+Define MVP scope for EKS upgrade automation
+
+Description
+As a platform engineer,
+I want to define a realistic first automation milestone,
+So that automation is incremental and safe.
+
+Acceptance Criteria
+	•	MVP automation scope documented
+	•	Explicit exclusions listed
+	•	Dependencies identified (APIs, permissions, data sources)
+	•	Alignment confirmed with platform leads
+
+⸻
+
+🟢 STORY 8: Shadow Live Upgrade Activities and Capture Findings
+
+Story Title
+Shadow live EKS upgrade and add-on installation activities
+
+Description
+As a platform engineer,
+I want to shadow real upgrade executions,
+So that documentation reflects actual behavior, not assumptions.
+
+Acceptance Criteria
+	•	At least one live upgrade or add-on installation shadowed
+	•	Observations documented:
+	•	Deviations from playbook
+	•	Manual interventions
+	•	Hidden dependencies
+	•	Findings fed back into discovery documentation
+
+⸻
+
+🟢 STORY 9: Consumer-Facing Upgrade Experience (Future Design)
+
+Story Title
+Design future consumer upgrade experience and validation flow
+
+Description
+As a platform team,
+We want to envision how consumers will safely request upgrades,
+So that the platform reduces operational burden and errors.
+
+Acceptance Criteria
+	•	High-level flow documented:
+	•	Version selection
+	•	Compatibility validation
+	•	Required actions surfaced
+	•	No implementation required
+	•	Design reviewed with stakeholders
+
+
+
+
+
+
+
+
+
 re are the meeting minutes (cleaned up + structured) from what you shared. I’m keeping the language close to what was discussed, but organized so you can send it to Matt / the team.
 
 ⸻
