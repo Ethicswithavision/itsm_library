@@ -1,10 +1,202 @@
+
+re are the meeting minutes (cleaned up + structured) from what you shared. I’m keeping the language close to what was discussed, but organized so you can send it to Matt / the team.
+
+⸻
+
+Meeting Minutes — ECR Pipeline + Nova Integration Alignment
+
+1) Purpose of the discussion
+	•	The team wants internal alignment first (ECR team only) before bringing in others (Felix / Matt / external teams).
+	•	Key outcome desired: define “scope of success” for the ECR pipeline + Nova work, and ensure the team is on the same technical page.
+
+⸻
+
+2) Roles / ownership clarity
+	•	ECR team = owners of the ECR pipeline/product.
+	•	Felix = brings expertise (especially around architecture/service-catalog type infrastructure), but is not the Jenkins agent owner.
+	•	Jenkins agent / controller ownership is separate (controller is managed by another team; ECR team consumes it).
+
+⸻
+
+3) High-level pipeline model (agreed mental model)
+
+10,000 ft view of what a consumer pipeline is expected to do:
+	1.	Developer commits code (source of truth = Git)
+	2.	Pipeline runs build steps (compile/package: jar/war/wheel/npm build/etc.)
+	3.	Build output artifacts are stored (example given: Artifactory) for traceability
+	4.	Docker image build happens (Dockerfile + artifact)
+	5.	Image pushed to ECR
+	6.	Optional: signing / scanning / compliance steps
+	7.	Optional: deployment step (EKS/ArgoCD/etc.)
+
+Notes:
+	•	Many security checks exist in real pipelines (Snyk/SAST/container scans/linters/etc.) but those can be treated as “steps in the workflow.”
+	•	Critical operational requirement: when failures happen, teams need traceability back to commit + artifact + image.
+
+⸻
+
+4) Nova’s role in the solution
+
+Nova is not the trigger source-of-truth.
+	•	Source-of-truth trigger remains: Git webhook.
+	•	Nova should serve as:
+	•	A UI to view pipeline runs/stages/progress
+	•	A place to re-run a pipeline (either from start, or from a step if supported)
+	•	A place to provide “one-stop” experience where needed (ex: provisioning repos/infrastructure via service catalog)
+
+⸻
+
+5) Key decision: GitOps over S3 upload
+
+Decision: Do not use “upload zip to S3 and build from S3” pattern as the primary solution.
+
+Reasons captured in discussion:
+	•	S3 is not a source of truth in the same way Git is.
+	•	Git provides:
+	•	commit history, traceability, accountability
+	•	easy investigation during incidents (“show me the commit that produced this”)
+	•	Uploading zip breaks clean traceability and complicates governance.
+
+Direction going forward: enforce a Git-based model (“GitOps style”), regardless of whether the user is testing or building production.
+
+⸻
+
+6) Credential / secret handling (Vault integration)
+
+Agreed principles:
+	•	Secrets must live in Vault (not hardcoded in Jenkins jobs/pipelines).
+	•	Consumers must not give broad “god tokens” that access everything.
+	•	Prefer a model where:
+	•	consumer provides a scoped token (HTTP access token or SSH key) for repo access
+	•	token is stored in Vault under an agreed path
+	•	pipeline fetches the token from Vault at runtime
+
+Open design points discussed:
+	•	Token per repo vs token per org/team:
+	•	Best practice direction mentioned: avoid token-per-repo explosion if possible (ops nightmare)
+	•	Nova may provide the UI to onboard/store tokens into Vault (one-time onboarding experience).
+
+⸻
+
+7) Scope boundaries (important alignment)
+
+The team separated concerns clearly:
+
+What is in scope for ECR pipeline
+	•	Build Docker image
+	•	Basic image checks (lint / container scan / minimal validation)
+	•	Push image to ECR
+	•	Provide Nova integration for visibility/triggering
+
+What is out of scope (owned by other build frameworks)
+	•	Full application build frameworks (running all app-level steps)
+	•	Managing all app-specific SAST/SCA rules (beyond minimal container/image controls)
+	•	Solving every consumer build style (Java/Node/Python) end-to-end inside ECR pipeline
+
+The expected assumption is:
+	•	The consumer (or their app build pipeline) already produced the artifact / content needed for the Docker build stage.
+
+⸻
+
+8) Authorization and “who can push where” problem (security gap)
+
+A major concern raised:
+	•	If pipeline uses a powerful shared identity, what prevents pushing/overwriting into other teams’ ECR repos?
+	•	ECR doesn’t have a “Koi organization” concept; so we need a mapping/authorization layer.
+
+Ideas mentioned:
+	•	Use Nova backend authorization similar to existing patterns:
+	•	Map AD groups / ownership to allowed repos/accounts
+	•	Backend API checks user’s group membership before allowing actions
+	•	Control via IAM:
+	•	role assumption into workload accounts
+	•	repo policies to restrict access
+	•	naming convention constraints (ex: eks/<team>/<repo>), but naming alone doesn’t fully prevent misuse unless enforced.
+
+Decision status:
+	•	Not fully solved; acknowledged as a must-fix before inviting consumers.
+	•	Past experience: security hardening took major time and is expected again.
+
+⸻
+
+9) Jenkins vs GitHub Actions timeline consideration
+	•	Team discussed: don’t overbuild Jenkins-only solutions if GitHub Actions migration is soon.
+	•	Current belief: GitHub Actions migration could be 1–2 years, not months → building Jenkins-based approach is likely worth it.
+	•	Still noted as a risk: avoid building something that gets thrown away quickly.
+
+⸻
+
+10) Service Catalog / Felix scope question
+
+Felix is expected to help with:
+	•	Infrastructure requirements / service catalog integration
+	•	Possibly: “create repo if not exists” workflow from Nova
+	•	Helping define how Nova connects to service catalog provisioning
+
+Important note:
+	•	Guardrails (SCPs/controls) should not be enforced until the solution is usable, otherwise teams get blocked with no path forward.
+
+⸻
+
+11) Near-term plan / next steps
+	1.	Proceed with GitOps approach (no S3 upload model).
+	2.	Define onboarding flow:
+	•	consumer provides repo token once
+	•	stored in Vault
+	•	used by pipeline at runtime
+	3.	Nova integration work:
+	•	trigger / view pipeline runs via Jenkins API (similar to EKS patching access pattern)
+	•	show stages and link to logs
+	4.	Security model:
+	•	minimum viable security for pilot: 1 consumer / 1 AD group / 1 workload account
+	•	later scale to broader mapping
+	5.	Set up follow-up meeting with Matt + Felix + internal team:
+	•	objective: confirm Felix scope and Nova integration expectations
+	•	reject ideas that fundamentally replace the agreed GitOps plan unless it truly improves it
+
+⸻
+
+12) Action items
+	•	Sandeep: share these minutes + align with team on next sprint tasks (Nova trigger/API integration, pipeline integration plan)
+	•	Team (Pradeep/Reza/etc.): continue pipeline work under GitOps assumptions; identify what data/stages Nova must display
+	•	Lead/Shaman: connect with Matt and schedule Felix discussion; confirm Q2 expectation for consumer pilot/readiness
+	•	Everyone: document the agreed approach (diagrams + responsibilities + interfaces)
+
+⸻
+
+13) Open questions (to take into next call)
+	•	What is the minimal “Felix success score” (deliverables) for this quarter?
+	•	service catalog integration?
+	•	repo creation workflow?
+	•	Nova component template support?
+	•	What is the minimal security model required to pilot safely?
+	•	Exact Vault integration approach:
+	•	Who writes secrets into Vault (Nova vs consumer)?
+	•	What is the secret path convention?
+	•	Jenkins pipeline re-run behavior:
+	•	restart from stage vs rerun from start?
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 Minutes – ECR Image Build + Nova Integration Discussion
 
 Date: (add date)
 Attendees: Sandeep, Pradeep, Felix, Reza (mentioned), Shraman/Matt (referenced), AOS Utilities (Greg/Rob mentioned)
 
 1) Context / Goal
-	•	Team is aligning on how consumers will build and publish container images to ECR and how much of that experience should live in Nova/Backstage.
+	•	Team
+ is aligning on how consumers will build and publish container images to ECR and how much of that experience should live in Nova/Backstage.
 	•	Two tracks are in flight:
 	1.	ECR repository creation (Service Catalog/Terraform module work – Felix)
 	2.	Image build pipeline (Jenkins-based pipeline – Felix pipeline being leveraged; Reza/Pradeep involved)
