@@ -1,5 +1,247 @@
-We needs to go in our existing infrastructure, but let's go with what I'm thinking right now, is you have your existing infrastructure, which we are not touching. So, where I've received, where an simple fits into the picture is actually triggering or making changes in pit bucket templates. That's one part I see. But I know then there are other parts like scaling up and down, like where we have to run the Q kettle commands. Right? And that's where you are thinking, correct, if I'm wrong, that's where the authentication for the cluster is needed through accessible. Yes. Yes, that's right. But then, but then, I think where done is coming is, if we have already a process, let's say, Jenkins, then why do we need to bring another tool through answerable? So there are 2 things, right? So one is This is where it becomes a little bit complex to make some decisions that, okay, you have something that's going on and running. Do you enhance it there? But let's say if you strategize to put everything on the new tool, then migrating also, like there is an operational cost for migrating as well. Yeah, yeah, my credit is like, what benefit do we get from doing that? Yeah, like you have to have the pros and cons, right? Like, let's say if I'd say just giving you one example, right? If I do something through Jenkins, because authentication and everything is already there. Okay? Then I might be taking if I'm able to achieve the same thing. Let's if I do through answerable, but then I have to put extra effort to redo all of my work for migration. Right, and I think that's where Things needs to be decided that, okay, if you want to use answerable CDD, what goes through answerable CDD and what goes through jackets or everything goes through one way. I don't know. And then there's a migration. Effort that will be required. Okay, need to, and also, let's try to analyze from long-term perspectibility. How do you want to go ahead doing this? Right? Like, is it scalable going ahead? Or is it more like, uh, it will have an operational over debt on us to manage? All these and civil and CAD releases. Now, what I'm thinking right now, we just do whatever we have, we are doing manually, and taking those manual steps and putting into the release, and what's ever needed for answer, we put those steps in our playbooks, or else we'll use the same Jenkins. We'll, in future, what I'm thinking will just put real, uh, complete CDD release as a release man. It doesn't, it has to only trigger, right? It should not, uh, do any deployments, right? I'm thinking what I'm thinking is like, taking little by little steps from Jenkins, what is more complicated, and move those tips into answerable, because answerable are are maintaining answerable playbook and reusing answerable play is very much easy. I don't think operational debt will be increased. I feel operation literally decreased because uh, anyway, we are using Copelet to write the amyl pies, right? But the JT template. It's itself, we have to manage a complete pipeline. So I think as your 1st step, this is okay. that you want to put all the manuals there, but now you have to segregate what other manual step. That is a quick wins versus what is the manual step that's going to take a lot of time for migration. I feel if you are doing something through pitbucket PR, like, for example, for an upgrade, we have 4 PRs, right? Yes. Correct? So let's say for those PR modifying just in the pit bucket transfer, that makes more sense to me. Okay? That's like a quick win. But doing the cube cuttle commands is kind of like, uh, Like, I won't, so I think there will be challenges and authentication. So, like, for example, I think this is one of our challenges right now. Jenkins also, if the command fails, let's say. How we will be doing it, right? So I know we can go into CTD, we can redo the release and, you know, try it again. So I think I'm more concerned on adaptability with cube cube cuttle commands and using with answerable and CDD. For me, til bit bucket, it is fine. All right. Okay. That's an established pattern. But now we are trying to create a new pattern where we are saying that we will do it via, uh, Like, we'll do cube cattle, command by answerable CDD. So right now there are 2 big projects that are going on. That's terraform OIDC and Jenkins, OIDC. Yes. If Jenkins has that YDC capability going ahead, right? Yeah. Then why would I need answerable? Why is your answerable stuff? Like, why would I need another set of authentication into my EKS clusters? Why can't I use my existing pipelines and click it from there to do the steps? Yeah, you're right. Yeah. I mean, there has to be a logic. There has to be a logic, right? Like that, one of the logic I can see is that you don't need to necessarily scale down broadcom nodes every time. That's what the kid told me. Right? It depends, and that's where I feel CDD release can be useful. Like, if you want to have that logic, through a release pattern, but then again, I believe it will be more complex, like, I'm also thinking from architecture and governance, right? Like you have to go through the approvals to establish a new pattern again. Hmm. And then maintaining those excess entries and roles and everything for answerable to. Yeah. Right now we have one role that's assumed through our terraform and checked like it's sentence and then terraform that does all the work. Then I think we should have one source of truth, right? Like, I like answerable and stuff to trigger the stuff. But not to execute the commands. Mm-hmm. That's my thinking, Sandeep, okay? That's where I'm going. And trying to just ease up the way. Uh, yeah. And think of like this also. I don't know how to say, like, I don't have a very fair judgement on complexities, but putting everything into one basket is also not good. But having multiple tools, like that sense, the bull Jenkins and having different orchestration ways for different steps. When it breaks, then I'm just thinking when things break, what is more tough to do? Yeah. Because then there's more dependencies and different things can... It's not pros and cons, right? So we have to find a balance where the what is the goal, right? We want to reduce operational debt. We want to, not operational that, operational overload, okay? And but you cannot eliminate it. Just think from that perspective. We are not eliminating the idea is to reduce it. So right now if you put everything to answerable and make like a seamless, let's say you have authentication and everything, it's all seamless. So you're eliminating overload, which is great, but I don't think so, that should be the 1st step, right? Because that's where learning and experience is going to come, and I think the team needs to also have adaptability, right? Like we are bringing in our go, we are bringing in new tools. Now we are saying that now you have if something goes wrong, you have to go into answerable, go like this and trigger most of the team. They don't even never have touch sensible in their life. So how do you bring that adaptability to the team as well? I think that's where My thinking is going by the approach to solve all this problem. Okay. Okay, what I understand right now, CDD will have, we have to use CDT because I think in pipelines surrounds we cannot rerun the Jenkins pattern as of now. If we use CDD in a different steps, if something wakes, we again go fix that tissue and come back and trigger the release. Uh for the CDD. And with the answerable, I need to compare both steps, what we are doing in the JT library and see how it answerable will help. Am I right? And then if it helps, we will check with the team at this and all problem and should be will solved. Or else we will not use answerable. That's what I understand. M making sense. Sherman. Shaman, or done? So, yeah, yeah, yeah, yeah. Yeah, yeah. Like, what are we trying to solve by introducing Hansel? Yeah. Right? Because the way I see it, if we're using Jenkins Day, if getting up actions gets introduced, we can port all that, or we can have actions. But if you use Ansable, where does that fit? Yeah, that one was... Yeah, now if you say guitar actions, we have been migrating to Ansibel to guitar action. Everything is the amulet. It is very easy to migrate. I'm using JT. I think I'm just talking about migration pattern. If it will be easy, but if you use answerable. But right now I will compare both JTL library and see, however, answer will help if Answell doesn't help any of our use case. I think we'll see. I will check. I compare. I don't want to comment right away, but I will check the GAT library and see. I will create some playbooks using answerable and see how it works. Yeah. Anyway, so, yeah, let's continue with Woods. Okay. Your thinking? Okay. Okay. So I think, Sandeep, if you really want to demonstrate that, right? I'll suggest you do one. Okay? Uh, I don't know how to say this, but... Maybe we have one cluster the world back to one. 32. Okay? Uh-huh. So this is where I feel that answerable and CD can be great. where you push your chios and have approvals, change ticket validation. From the, Like in a single process floor, right? PR one, PR 2, PR 3, PR 4. You know, verifies if the PR has a successful build and completed, then only it will go to the next step of PR. Okay. So then... That's what I build, like... But then, yeah. We also have to fix our build thing, right? Because right now, the build, it actually doesn't, it only channel, like, didn't run. Yeah. Right, yeah. Right now, like, regardless of how it just, like, didn't run yes or no. So, we will have any of that logic in that. That's what's up for that. Okay. Ah. I think, from my experience, correct me, Sunday, Answalker actually go into the builders, check specific parameters too, right? And make a decision, whether it has failed or passed, like through CD degrees, like there are certain parameters that you can pass, right? Yes. You can go and verify. So I think that's a flexibility I like, but that's something that on us, even if, let's say, this is the same approach, you want to do through NOA. So it's kind of like you have to fix things on a pipeline bills. in order to correctly capture it. But if I think, if for the next steps, I'm just saying, for your work, some need, if you really want to demonstrate this, I think I'll take small steps and I'll be like, okay. I have a PR, and how do I push up here right now in steps? Maybe you don't need to upgrade a cluster. Maybe just showing the PRs, how they get step by step, like it's trying to establish a process. Right? So people don't have to kind of like raise PRs and wait for people. It's kind of like automatically trigging and validating. Yeah, about it. Let improve the release, right? Yeah. How about it? Okay. Yeah, anything else you want to add then or you're good with this? I will compare everything and I will let you guys know and I have one more thing I want to ask. Shman, shall I close all these stories? So before, sorry. Yeah, go. No, just go back to that one. right? Like say, for example, you want to convince the team to do this. If you, so you have to do the way that makes the process simpler. Like, the way you show it to me now, especially if you show it to the rest of the team, it'll be like, wait, we're introducing more tools for this. Like, why? What, how will it help? Hmm. Yeah. Like, if you have some, like, what runs just, okay, how, like, to actually demonstrate that, then it may be, it might make it clearer. Okay. Yeah, I've cleared some pipeline. You can take a double depot, you can take a double depot. It does, like, as you did previously for the PR post, right? to like for NOA, correct? Yeah. You can take that the meaning of and you can like kind of like execute and show the workflow. How does it work? Like iteration one, 2nd iteration, we can have service now as well. Like, that's kind of like a lining to an motor's goals, how we can automate this, right? So I think, like, it will be very useful just for that purpose, right? So go like by step by step. Right now I have a process. I have to raise certain PRs. How do I do it to an automated way? Right? Okay. We are not talking about cells, so we are not talking about enhancing capability, how things would be done. I think right now we don't even have an automation right in this team to do stuff on us. So I think the focus is how we can automate. And then you can align that with service or integration, blah, blah, blah. Like, there are a lot of options on the tables you can do through nowhere directly, however you want to do, right? But right now, I think our focus is, This is a problem, but if I use, let's say, approach one, This will be resort. Right? And that approach is not like a strategic approach. It's like an iteration. Maybe in future, you may use no word to do the service, no integration, long with answerable steps, a bit bucket, right? Everything cannot be done on bit bucket, as we saw, for PR approvals as well. So, I think that's where tools like this are going to need a huge impact. And yeah, if you can build something within the next few days, like, I'll be very honest, and if there is like a capability demo that can show 1st step, how we can go and onto it, at least on manual processors. I would love to show this to the, like, consumers in a monthly correct, right? Like this is one of the workflow. This is one of the investigations. This is one of the approach we tested, but in next quarter, we'll be going and refining and seeing what are the other tools and how we need to go with that approach. It'll send a very strong message that we are aligning with the goals. We are aligning with automation work. We have a lot of huge debts. So you start like this, why we are doing this. What is like that vantage? How much time do we spend on automation, like on upgrades, right? At an animal basis. And that's where small and small steps will come. Okay. Okay. Yeah, I'll... So, if you can show something within the next few days, I'll be happy to put it there if it all looks good. It's all about, you know, you spent some time about learning it. But now you want to just do some investigations, put it there. What they did. Okay. Okay. Yeah, I will, I will look into that. And I will close all these stories, whatever investigations are done. And I don't think I will uh, create anything. I think what, and also I want to discuss about this one, right now, the sun all created without telling you guys, right? I just started creating the stories, but from next, from this rent, from today, whatever we discussed, that's the only stories I will be creating it, and if you have any questions or anything, just, uh, let me know right away that will help in order, because Saurav is keep on asking me to asking a lot of questions that help me to close or open a stories, if anything is, anything dependent on any stories. I'm making this. Yeah. Okay. And I'll just say it is. And I'll just say it's sort of jobs to make sure stories are there properly and sprained, and we are committing to the work, right? I know you're not, a lot of, a lot strictly following age either way. Like, let's say in the future, if we go with story points and stuff, then things will be tried. So I think we should only look like what you want to do, get it aligned, right? Take small steps. That's why I said take some small steps. need to demonstrate, right? I think that's my experience in automation, just talking outside this work. If you want to bring anything in automation, you have to 1st demonstrate it a very, let's say, micro level. This is one step, step one. And this is how we can achieve. But there are multiple options. The creative strategy, this is strategic strategy, right? And then people have confidence at what's going on and then you go to the next step, right? Like you slowly and slowly build those components, right? AI gives you a lot of capability to build everything at one go. But I think that's where, as humans, you know, trained, I'll just say that, but we are not trained to be aligned, to bring everything at one, right? You want to understand each and every component as well. Yeah. Like you need to have like strong foundation for building stuff over top of it. Yeah. I'll put this link in the chart. Can you look into this and see if you guys can? Have access in order to create the folder? Because there was a form for all the developed tools. I did submitted that form for Jenkins and for Bid Bucket. I did not see anything with bucket work created, but I'll check again now. But even, uh, Shraman, did you approve that request? What like, uh, for Asia? Yeah, it got, so what is happening for easier? don't know. Yeah, yeah. Basically, yeah, I submitted a request. I think ECR project was also got created. Can you check this as well if you, because you both are all owners. I don't have access. to see any conflict or anything. Because I go to stories from Pradeep in order to create a project in Big Bucket and create a folder in 10 games. There's an automatic form already in place in service now. Okay, so I can see the folder. What else do I? Yeah. What do we need to do? So why do we have more? Why do we have both cloud containers, enablement cloud container, enablement rate, only cloud enablement, cloud enablement rate, don't we? Yeah, and that I don't know. This is an automated flow. There is no options in service now. Once you and Gannon, you uproad it, it automatically creates. So, so what is, so what is the direction going ahead every time? I'm not sure about it. Are we shifting things out of cloud engineering and putting in this folder? What is what is like the strategic way to do? But this is only we are focussing on ECR pipelines, right? Not our EKS. No, but then you also have then if you scroll, okay. Yeah, wait, Soviet. Wait, why do we have, so we have call contain enablement. Okay. Yes, we have four. Further down, we have EKS test, ECR. Is that what's? Purdeep has been using to test. No, it's fine. I think... Do we have? Yeah, we're using for taste. Okay, so do we need to remove? One? one? We need to move this one more confused. Can you go back? Can you go back to cloud engineering, please? Loud engineering. Yeah. So under cloud engineering, I also see this thing, container image built pipeline, container built, like, I'm a bit confused what is happening inside this one. I know you kissed my client. This is us, correct? But then we have something to contain our image with a pipeline used 23 years ago. Yeah, maybe talk with 1st Pradeep and try to get clarification on the ECR part, what's happening. Like the things we don't need, just remove it. Okay. And if the long-term direction down is to put everything from cloud engineering to these folders and maintain ourselves. Then need to plan this accordingly. Yeah, until you know this was happening. Okay. Yeah, yeah. I will check with Pradeep and see how what exactly he needed and remove, if anything is not needed, I'll remove those shoulders. And the 2nd one is, I think, I don't have access if Pradeep needs any pipeline. I don't have access in order to create any pipelines. Any folders, I think I will reach out to guys later. advance, really, this, give, give me the complete conscious. Yeah, I think that's all I have, but for today. Yeah. Okay. Okay. Yeah, clarify with him, and then let us know which world does you are requesting and then it'll go from there, okay? Okay. Okay. Yeah. Thanks. thanks for that. Thanks, Dan. Thank you. Thank you. Bye.
+Here’s a cleaned and structured version of the discussion.
 
+What the discussion was mainly about
 
+The team is trying to move EKS-related Terraform deployments away from the old IAM user + assume-role pattern and toward OIDC-based authentication for Terraform Cloud/private runners.
 
-Get the minutes 
+Right now, deployment still depends on elevated access in some places, and that is not acceptable for rollout to consumer accounts. So before this can be broadly launched, a new role and access model must be set up correctly in each consumer account.
+
+⸻
+
+Core technical discussion
+
+1. Current problem
+
+Today, deployment is being done using a higher-privileged role, but consumer accounts do not have that same access model.
+
+The existing cluster access role is read-only in some accounts, so it cannot launch the Service Catalog product. That means rollout is blocked until a proper deployment role is created with the required permissions.
+
+2. Dependency identified
+
+Before rollout, each EKS/consumer account needs:
+	•	a new role with the right permissions for Service Catalog launch
+	•	access entry updates so the new OIDC role can actually operate against the cluster
+	•	integration updates so the Service Catalog side knows which role to use
+
+This was clearly called out as a prerequisite.
+
+3. Terraform/module changes being proposed
+
+The module is being updated so it no longer relies on the old assume-role flow.
+
+That means:
+	•	removing old assume-role references from Terraform code
+	•	removing variables related to that pattern
+	•	relying on workspace/environment authentication instead
+	•	updating wrapper configs and templates as well, not just the shared module
+
+This is important: the change is not only in one module. It affects:
+	•	wrapper module
+	•	cluster-specific wrapper configs
+	•	Bitbucket/Jenkins templates
+	•	workspace/project setup in Terraform Cloud
+
+4. Big concern raised: local-exec / kubectl flows
+
+A very important question was raised around places where local-exec or kubectl commands depend on exported AWS credentials.
+
+That matters because previously:
+	•	Terraform Cloud had IAM user credentials
+	•	pipeline used STS assume-role
+	•	temporary credentials were exported
+	•	kubectl/local-exec commands used those exported credentials
+
+Now with OIDC, the team needs to confirm:
+	•	whether those credentials are still available in a usable form
+	•	whether they refresh automatically
+	•	whether long-running operations will break
+	•	whether local-exec/kubectl patterns still work the same way
+
+This is one of the biggest technical risks from the discussion.
+
+⸻
+
+Migration approach being debated
+
+Two possible approaches were discussed.
+
+Option A: Do migration during Argo CD rollout or upgrade
+
+The idea here is:
+	•	when touching a cluster anyway for Argo CD or upgrade
+	•	also migrate its workspace/project/module/auth pattern at the same time
+
+The benefit:
+	•	testing happens naturally during a real plan/apply
+	•	avoids doing a separate Terraform apply window just for migration
+
+The downside:
+	•	too many moving parts in one change window
+	•	harder to troubleshoot if something breaks
+	•	rollback becomes more complicated because multiple things changed at once
+
+Option B: Separate activity before larger operations
+
+The safer view from others was:
+	•	keep Argo CD and upgrade changes as simple as possible
+	•	test OIDC migration separately
+	•	use lab/test/new clusters first
+	•	build confidence before using it in large upgrade windows
+
+This view got strong support because the upcoming upgrade already has a lot of complexity.
+
+⸻
+
+Important operational concerns raised
+
+1. This is not “just one manual change”
+
+Dan pointed out that even if one step feels small, it becomes large when multiplied across many clusters and workspaces.
+
+This is a strong engineering point:
+	•	one manual step × many clusters = operational risk
+	•	repeated manual moves increase chance of inconsistency or human error
+
+2. Rollback is not simple
+
+Rollback is not only “move workspace back.”
+
+Because once you:
+	•	move workspace to new project
+	•	remove old credentials
+	•	update module/wrapper code
+
+then rollback may require both:
+	•	workspace/project rollback
+	•	code/module rollback
+
+That makes rollback planning essential.
+
+3. Bulk migration vs workspace-by-workspace
+
+Bulk variable updates/API-driven changes are technically possible, but the team is worried that:
+	•	they do not provide enough validation
+	•	they do not prove end-to-end success
+	•	they create risk without good testing checkpoints
+
+So the preferred model seems closer to:
+	•	test in lab
+	•	test on new cluster(s)
+	•	possibly move workspace-by-workspace
+	•	validate end-to-end plan/apply
+
+⸻
+
+Authentication/session duration discussion
+
+There was also a detailed discussion about why credentials used to expire.
+
+Old pattern
+
+Previously:
+	•	Terraform used short-lived credentials
+	•	local kubectl commands reused those same credentials
+	•	if those expired during long operations, commands failed
+
+To fix that, the team explicitly generated temporary credentials using STS assume-role and exported them.
+
+New OIDC question
+
+Now the open question is:
+	•	with OIDC, what is the actual session duration?
+	•	does Terraform refresh credentials automatically?
+	•	do local-exec/kubectl steps still fail if they reuse temporary values without refresh?
+
+Important technical conclusion from Dan:
+	•	Terraform provider can refresh credentials when making AWS API calls
+	•	but kubectl/local-exec may not automatically refresh in the same way
+	•	so the problem is not Terraform alone, but anything outside Terraform that directly reuses credentials
+
+That is exactly why this needs validation before rollout.
+
+⸻
+
+New cluster idea
+
+A practical idea came up:
+use new clusters as a safer place to introduce this model first.
+
+Why this is a good idea:
+	•	no legacy workload dependency
+	•	easier to test new project/workspace/OIDC setup
+	•	lower migration complexity than existing clusters
+	•	gives confidence before touching existing fleet
+
+That is probably the best pilot path from this discussion.
+
+⸻
+
+Suggested cleaned meeting outcome
+
+Decisions leaning toward agreement
+	1.	OIDC migration is needed.
+	2.	Consumer rollout is blocked until the new required role/access model exists.
+	3.	This change affects module code, wrapper code, workspace/project setup, and templates.
+	4.	Local-exec/kubectl credential behavior must be validated before rollout.
+	5.	Doing this inside a large upgrade/change window is risky unless tested first.
+	6.	Lab clusters and new clusters are the best places to validate first.
+
+⸻
+
+Action items
+
+Sandeep
+	•	Review the module again and validate how credentials behave with OIDC.
+	•	Specifically test exported credentials/local-exec/kubectl behavior.
+	•	Confirm session duration and refresh behavior for the new authentication model.
+	•	Meet with Prateek to align on migration approach.
+	•	Create/update documentation for before/after flow.
+	•	Prepare feature-branch-based testing and tag a beta module version.
+
+Prateek
+	•	Review with Sandeep what exact effort is needed during a change window.
+	•	Help evaluate whether this can be introduced before Argo pilot, during pilot, or separately.
+	•	Review documentation and technical change set.
+	•	Think through communication plan for pilot teams if this change is included.
+
+Team / Dan / broader group
+	•	Decide whether migration is:
+	•	separate pre-work, or
+	•	part of a controlled pilot only
+	•	Define rollback plan clearly
+	•	Decide who gets temporary workspace/project migration permissions
+	•	Evaluate whether new cluster provisioning should use OIDC model first
+
+⸻
+
+Risks
+
+Technical risks
+	•	local-exec/kubectl may fail if credentials expire
+	•	missing permissions in new role/access entry setup
+	•	wrapper/template changes missed in some places
+	•	hidden dependency on old assume-role pattern
+
+Operational risks
+	•	too many changes in same change window
+	•	difficult rollback
+	•	repeated manual workspace movement
+	•	vacation/ownership gap if the work is not handed off clearly
+
+⸻
+
+My read as a senior engineer
+
+The safest path is:
+	1.	finish lab validation first
+	2.	confirm credential/session behavior for local-exec and kubectl
+	3.	release a beta module from feature branch
+	4.	test on one or two new/internal clusters
+	5.	document exact migration steps and rollback
+	6.	only then decide whether it should be included near Argo or upgrades
+
+Why this path is better:
+	•	it isolates the authentication change
+	•	it gives real evidence instead of assumptions
+	•	it reduces blame confusion during Argo or upgrade failures
+	•	it gives a repeatable rollout model for the rest of the fleet
