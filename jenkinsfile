@@ -1,247 +1,202 @@
-Here’s a cleaned and structured version of the discussion.
-
-What the discussion was mainly about
-
-The team is trying to move EKS-related Terraform deployments away from the old IAM user + assume-role pattern and toward OIDC-based authentication for Terraform Cloud/private runners.
-
-Right now, deployment still depends on elevated access in some places, and that is not acceptable for rollout to consumer accounts. So before this can be broadly launched, a new role and access model must be set up correctly in each consumer account.
+Below are clean, structured Minutes of Meeting (MoM) you can directly store in your project docs.
 
 ⸻
 
-Core technical discussion
+Minutes of Meeting
 
-1. Current problem
-
-Today, deployment is being done using a higher-privileged role, but consumer accounts do not have that same access model.
-
-The existing cluster access role is read-only in some accounts, so it cannot launch the Service Catalog product. That means rollout is blocked until a proper deployment role is created with the required permissions.
-
-2. Dependency identified
-
-Before rollout, each EKS/consumer account needs:
-	•	a new role with the right permissions for Service Catalog launch
-	•	access entry updates so the new OIDC role can actually operate against the cluster
-	•	integration updates so the Service Catalog side knows which role to use
-
-This was clearly called out as a prerequisite.
-
-3. Terraform/module changes being proposed
-
-The module is being updated so it no longer relies on the old assume-role flow.
-
-That means:
-	•	removing old assume-role references from Terraform code
-	•	removing variables related to that pattern
-	•	relying on workspace/environment authentication instead
-	•	updating wrapper configs and templates as well, not just the shared module
-
-This is important: the change is not only in one module. It affects:
-	•	wrapper module
-	•	cluster-specific wrapper configs
-	•	Bitbucket/Jenkins templates
-	•	workspace/project setup in Terraform Cloud
-
-4. Big concern raised: local-exec / kubectl flows
-
-A very important question was raised around places where local-exec or kubectl commands depend on exported AWS credentials.
-
-That matters because previously:
-	•	Terraform Cloud had IAM user credentials
-	•	pipeline used STS assume-role
-	•	temporary credentials were exported
-	•	kubectl/local-exec commands used those exported credentials
-
-Now with OIDC, the team needs to confirm:
-	•	whether those credentials are still available in a usable form
-	•	whether they refresh automatically
-	•	whether long-running operations will break
-	•	whether local-exec/kubectl patterns still work the same way
-
-This is one of the biggest technical risks from the discussion.
+Topic: Permission Set & Role creation for Terraform OIDC Service Catalog Product (EKS)
+Date: April 6, 2026
+Attendees: Sandeep, Alberto, Amar, Suyin, Dan, Raman, Pratik, Veera, Anshul (referenced)
 
 ⸻
 
-Migration approach being debated
-
-Two possible approaches were discussed.
-
-Option A: Do migration during Argo CD rollout or upgrade
-
-The idea here is:
-	•	when touching a cluster anyway for Argo CD or upgrade
-	•	also migrate its workspace/project/module/auth pattern at the same time
-
-The benefit:
-	•	testing happens naturally during a real plan/apply
-	•	avoids doing a separate Terraform apply window just for migration
-
-The downside:
-	•	too many moving parts in one change window
-	•	harder to troubleshoot if something breaks
-	•	rollback becomes more complicated because multiple things changed at once
-
-Option B: Separate activity before larger operations
-
-The safer view from others was:
-	•	keep Argo CD and upgrade changes as simple as possible
-	•	test OIDC migration separately
-	•	use lab/test/new clusters first
-	•	build confidence before using it in large upgrade windows
-
-This view got strong support because the upcoming upgrade already has a lot of complexity.
+1. Context / Problem
+	•	Team is moving Terraform workspaces to OIDC authentication (removing static AWS keys).
+	•	A Service Catalog product already exists to create the Terraform OIDC deployment role for workload accounts.
+	•	Currently, not all team members have PowerUser role across accounts.
+	•	Need a least-privilege permission set allowing team members to launch the Service Catalog product without granting full PowerUser access.
+	•	Goal: enable EKS team to rollout OIDC role across consumer workload accounts.
 
 ⸻
 
-Important operational concerns raised
+2. Key Discussion Points
 
-1. This is not “just one manual change”
-
-Dan pointed out that even if one step feels small, it becomes large when multiplied across many clusters and workspaces.
-
-This is a strong engineering point:
-	•	one manual step × many clusters = operational risk
-	•	repeated manual moves increase chance of inconsistency or human error
-
-2. Rollback is not simple
-
-Rollback is not only “move workspace back.”
-
-Because once you:
-	•	move workspace to new project
-	•	remove old credentials
-	•	update module/wrapper code
-
-then rollback may require both:
-	•	workspace/project rollback
-	•	code/module rollback
-
-That makes rollback planning essential.
-
-3. Bulk migration vs workspace-by-workspace
-
-Bulk variable updates/API-driven changes are technically possible, but the team is worried that:
-	•	they do not provide enough validation
-	•	they do not prove end-to-end success
-	•	they create risk without good testing checkpoints
-
-So the preferred model seems closer to:
-	•	test in lab
-	•	test on new cluster(s)
-	•	possibly move workspace-by-workspace
-	•	validate end-to-end plan/apply
+2.1 PR Update Required
+	•	Repository contains policy template for permission set.
+	•	Action required:
+	•	Clone repository
+	•	Add required policy updates
+	•	Create Pull Request
+	•	Role naming convention to follow format suggested by Daniel.
+	•	Specific change:
+	•	Copy policy block from lines 79–110
+	•	Replace role name at line 84
+	•	Do not include tag section.
 
 ⸻
 
-Authentication/session duration discussion
+2.2 Purpose of Role
 
-There was also a detailed discussion about why credentials used to expire.
+The new role will:
+	•	Allow launching Service Catalog product
+	•	Product creates Terraform OIDC deployment role
+	•	Scope limited to:
+	•	No broad EKS admin permissions
+	•	Only required privileges to launch the Service Catalog product
 
-Old pattern
+Key principle:
 
-Previously:
-	•	Terraform used short-lived credentials
-	•	local kubectl commands reused those same credentials
-	•	if those expired during long operations, commands failed
-
-To fix that, the team explicitly generated temporary credentials using STS assume-role and exported them.
-
-New OIDC question
-
-Now the open question is:
-	•	with OIDC, what is the actual session duration?
-	•	does Terraform refresh credentials automatically?
-	•	do local-exec/kubectl steps still fail if they reuse temporary values without refresh?
-
-Important technical conclusion from Dan:
-	•	Terraform provider can refresh credentials when making AWS API calls
-	•	but kubectl/local-exec may not automatically refresh in the same way
-	•	so the problem is not Terraform alone, but anything outside Terraform that directly reuses credentials
-
-That is exactly why this needs validation before rollout.
+Follow least privilege access instead of giving PowerUser role to all team members.
 
 ⸻
 
-New cluster idea
+2.3 Tiered Access Discussion
 
-A practical idea came up:
-use new clusters as a safer place to introduce this model first.
+Discussion on whether permission should fall under Tiered Access model.
 
-Why this is a good idea:
-	•	no legacy workload dependency
-	•	easier to test new project/workspace/OIDC setup
-	•	lower migration complexity than existing clusters
-	•	gives confidence before touching existing fleet
-
-That is probably the best pilot path from this discussion.
-
-⸻
-
-Suggested cleaned meeting outcome
-
-Decisions leaning toward agreement
-	1.	OIDC migration is needed.
-	2.	Consumer rollout is blocked until the new required role/access model exists.
-	3.	This change affects module code, wrapper code, workspace/project setup, and templates.
-	4.	Local-exec/kubectl credential behavior must be validated before rollout.
-	5.	Doing this inside a large upgrade/change window is risky unless tested first.
-	6.	Lab clusters and new clusters are the best places to validate first.
+Options discussed:
+	•	Tier 3 → considered too broad
+	•	Tier 2 → more appropriate because:
+	•	Role does NOT create EKS clusters
+	•	Only launches Service Catalog product
+	•	Decision leaning:
+	•	Allow Tier 2 or higher access
+	•	Keep flexible for future migration to tiered access model
 
 ⸻
 
-Action items
+2.4 Why manual launch vs automation?
 
+Question raised:
+Why not automate creation of OIDC role automatically?
+
+Current constraints:
+	•	Each account may have:
+	•	different Terraform workspace name
+	•	different project mapping
+	•	Not all accounts currently migrated to OIDC
+	•	Automation planned in later phase once baseline OIDC roles exist.
+
+Future vision:
+	•	Fully automated provisioning
+	•	Triggered when cluster provisioning workflow runs (Nova/self-service model)
+
+⸻
+
+2.5 Service Catalog Product Inputs
+
+Parameters required for Service Catalog product:
+	•	Terraform organization name
+	•	workspace/project identifiers
+
+Used to create:
+Terraform deployment role with required policies.
+
+⸻
+
+2.6 Permission Set Creation Process
+
+Steps identified:
+
+Step 1 – Create Permission Set
+
+Sandeep to:
+	•	create new permission set
+	•	attach required policy
+	•	map to AD group
+
+Step 2 – Add Launch Access
+
+Launch permissions must be added to Service Catalog portfolio.
+
+Two options:
+	1.	via AWS Console
+	2.	via pipeline configuration (preferred)
+
+Pipeline location:
+Service Catalog product repo → pipeline configuration → launch constraint section.
+
+Add:
+new permission set ARN to launch constraint configuration.
+
+⸻
+
+2.7 AD Group Requirement
+
+Permission set must be mapped to AD group.
+
+Potential users requiring access:
+	•	Sandeep
+	•	Raman
+	•	Dan
+	•	Pratik
+	•	Veera
+	•	Anshul
+
+Action:
+confirm existing AD group for EKS squad or create temporary group.
+
+⸻
+
+2.8 Account Targeting Strategy
+
+Need clarity on which accounts should receive role.
+
+Initial scope:
+Non-production workload accounts.
+
+Possible targeting options:
+	•	account IDs list
+	•	account grouping construct
+
+Examples of group identifiers:
+	•	broad-workload-all
+	•	nonprod-workload-asia
+	•	other predefined account groupings created by platform team.
+
+Need confirmation from Sherman/Dan on correct group.
+
+Topic
+Decision
+Permission scope
+Least privilege role only for launching Service Catalog product
+Tier level
+Likely Tier 2 (or Tier 2+)
+Automation
+manual launch for now, automation later
+Launch access configuration
+via pipeline preferred
+AD group
+required for permission set mapping
+Initial rollout
+Non-prod workload accounts
+
+
+Owner
+Task
 Sandeep
-	•	Review the module again and validate how credentials behave with OIDC.
-	•	Specifically test exported credentials/local-exec/kubectl behavior.
-	•	Confirm session duration and refresh behavior for the new authentication model.
-	•	Meet with Prateek to align on migration approach.
-	•	Create/update documentation for before/after flow.
-	•	Prepare feature-branch-based testing and tag a beta module version.
+Clone repo and create PR with updated policy
+Sandeep
+Create new permission set
+Sandeep
+Identify AD group for EKS squad
+Sandeep
+Add permission set to Service Catalog launch constraint
+Sherman/Dan
+confirm account grouping strategy
+Team
+validate naming convention for role
+Platform team
+evaluate future automation for OIDC role provisioning
 
-Prateek
-	•	Review with Sandeep what exact effort is needed during a change window.
-	•	Help evaluate whether this can be introduced before Argo pilot, during pilot, or separately.
-	•	Review documentation and technical change set.
-	•	Think through communication plan for pilot teams if this change is included.
 
-Team / Dan / broader group
-	•	Decide whether migration is:
-	•	separate pre-work, or
-	•	part of a controlled pilot only
-	•	Define rollback plan clearly
-	•	Decide who gets temporary workspace/project migration permissions
-	•	Evaluate whether new cluster provisioning should use OIDC model first
 
-⸻
 
-Risks
 
-Technical risks
-	•	local-exec/kubectl may fail if credentials expire
-	•	missing permissions in new role/access entry setup
-	•	wrapper/template changes missed in some places
-	•	hidden dependency on old assume-role pattern
 
-Operational risks
-	•	too many changes in same change window
-	•	difficult rollback
-	•	repeated manual workspace movement
-	•	vacation/ownership gap if the work is not handed off clearly
 
-⸻
 
-My read as a senior engineer
 
-The safest path is:
-	1.	finish lab validation first
-	2.	confirm credential/session behavior for local-exec and kubectl
-	3.	release a beta module from feature branch
-	4.	test on one or two new/internal clusters
-	5.	document exact migration steps and rollback
-	6.	only then decide whether it should be included near Argo or upgrades
 
-Why this path is better:
-	•	it isolates the authentication change
-	•	it gives real evidence instead of assumptions
-	•	it reduces blame confusion during Argo or upgrade failures
-	•	it gives a repeatable rollout model for the rest of the fleet
+
+
