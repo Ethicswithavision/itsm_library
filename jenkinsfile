@@ -1,202 +1,50 @@
-Below are clean, structured Minutes of Meeting (MoM) you can directly store in your project docs.
-
-⸻
-
-Minutes of Meeting
-
-Topic: Permission Set & Role creation for Terraform OIDC Service Catalog Product (EKS)
-Date: April 6, 2026
-Attendees: Sandeep, Alberto, Amar, Suyin, Dan, Raman, Pratik, Veera, Anshul (referenced)
-
-⸻
-
-1. Context / Problem
-	•	Team is moving Terraform workspaces to OIDC authentication (removing static AWS keys).
-	•	A Service Catalog product already exists to create the Terraform OIDC deployment role for workload accounts.
-	•	Currently, not all team members have PowerUser role across accounts.
-	•	Need a least-privilege permission set allowing team members to launch the Service Catalog product without granting full PowerUser access.
-	•	Goal: enable EKS team to rollout OIDC role across consumer workload accounts.
-
-⸻
-
-2. Key Discussion Points
-
-2.1 PR Update Required
-	•	Repository contains policy template for permission set.
-	•	Action required:
-	•	Clone repository
-	•	Add required policy updates
-	•	Create Pull Request
-	•	Role naming convention to follow format suggested by Daniel.
-	•	Specific change:
-	•	Copy policy block from lines 79–110
-	•	Replace role name at line 84
-	•	Do not include tag section.
-
-⸻
-
-2.2 Purpose of Role
-
-The new role will:
-	•	Allow launching Service Catalog product
-	•	Product creates Terraform OIDC deployment role
-	•	Scope limited to:
-	•	No broad EKS admin permissions
-	•	Only required privileges to launch the Service Catalog product
-
-Key principle:
-
-Follow least privilege access instead of giving PowerUser role to all team members.
-
-⸻
-
-2.3 Tiered Access Discussion
-
-Discussion on whether permission should fall under Tiered Access model.
-
-Options discussed:
-	•	Tier 3 → considered too broad
-	•	Tier 2 → more appropriate because:
-	•	Role does NOT create EKS clusters
-	•	Only launches Service Catalog product
-	•	Decision leaning:
-	•	Allow Tier 2 or higher access
-	•	Keep flexible for future migration to tiered access model
-
-⸻
-
-2.4 Why manual launch vs automation?
-
-Question raised:
-Why not automate creation of OIDC role automatically?
-
-Current constraints:
-	•	Each account may have:
-	•	different Terraform workspace name
-	•	different project mapping
-	•	Not all accounts currently migrated to OIDC
-	•	Automation planned in later phase once baseline OIDC roles exist.
-
-Future vision:
-	•	Fully automated provisioning
-	•	Triggered when cluster provisioning workflow runs (Nova/self-service model)
-
-⸻
-
-2.5 Service Catalog Product Inputs
-
-Parameters required for Service Catalog product:
-	•	Terraform organization name
-	•	workspace/project identifiers
-
-Used to create:
-Terraform deployment role with required policies.
-
-⸻
-
-2.6 Permission Set Creation Process
-
-Steps identified:
-
-Step 1 – Create Permission Set
-
-Sandeep to:
-	•	create new permission set
-	•	attach required policy
-	•	map to AD group
-
-Step 2 – Add Launch Access
-
-Launch permissions must be added to Service Catalog portfolio.
-
-Two options:
-	1.	via AWS Console
-	2.	via pipeline configuration (preferred)
-
-Pipeline location:
-Service Catalog product repo → pipeline configuration → launch constraint section.
-
-Add:
-new permission set ARN to launch constraint configuration.
-
-⸻
-
-2.7 AD Group Requirement
-
-Permission set must be mapped to AD group.
-
-Potential users requiring access:
-	•	Sandeep
-	•	Raman
-	•	Dan
-	•	Pratik
-	•	Veera
-	•	Anshul
-
-Action:
-confirm existing AD group for EKS squad or create temporary group.
-
-⸻
-
-2.8 Account Targeting Strategy
-
-Need clarity on which accounts should receive role.
-
-Initial scope:
-Non-production workload accounts.
-
-Possible targeting options:
-	•	account IDs list
-	•	account grouping construct
-
-Examples of group identifiers:
-	•	broad-workload-all
-	•	nonprod-workload-asia
-	•	other predefined account groupings created by platform team.
-
-Need confirmation from Sherman/Dan on correct group.
-
-Topic
-Decision
-Permission scope
-Least privilege role only for launching Service Catalog product
-Tier level
-Likely Tier 2 (or Tier 2+)
-Automation
-manual launch for now, automation later
-Launch access configuration
-via pipeline preferred
-AD group
-required for permission set mapping
-Initial rollout
-Non-prod workload accounts
-
-
-Owner
-Task
-Sandeep
-Clone repo and create PR with updated policy
-Sandeep
-Create new permission set
-Sandeep
-Identify AD group for EKS squad
-Sandeep
-Add permission set to Service Catalog launch constraint
-Sherman/Dan
-confirm account grouping strategy
-Team
-validate naming convention for role
-Platform team
-evaluate future automation for OIDC role provisioning
-
-
-
-
-
-
-
-
-
-
-
-
+EKS Upgrade Automation
+Change Management Automation Epic — User Stories
+Story 1: Convert EKS Upgrade Documentation to Structured Markdown
+Checklist
+As a platform engineer,
+I want the existing EKS upgrade documentation converted into a structured markdown checklist,
+So that the validation automation has a machine-readable source of truth for upgrade gates.
+ACCEPTANCE CRITERIA
+1. Existing upgrade docs (Confluence or Wiki) are exported and converted to markdown
+2. Each validation item is represented as a checklist item (- [ ] item)
+3. Checklist is organized by category (pre-upgrade checks, node group checks, add-on compatibility,
+post-upgrade validation)
+4. Markdown file is committed to the repo under a predictable path (e.g., docs/eks-upgrade-checklist.md)
+5. Checklist is versioned — filename or frontmatter reflects the EKS target version (e.g., 1.32-to-1.33)
+Story 2: Build Validation Script to Parse and Execute Checklist
+As a platform engineer,
+I want a script that reads the markdown checklist and executes each validation check
+programmatically,
+So that upgrade readiness is automatically verified without manual review.
+ACCEPTANCE CRITERIA
+1. Script parses the markdown checklist and maps each item to a corresponding automated check (bash,
+Python, or kubectl command)
+2. Each check produces a clear PASS / FAIL output with a reason
+3. Script exits with a non-zero code if any check fails
+4. Results are printed in a structured format (e.g., table or JSON) suitable for Jenkins logs
+5. Script is runnable locally and in CI
+Story 3: Integrate Validation Script into Jenkins Pipeline on PR Push
+As a platform engineer,
+I want the validation script triggered automatically when a PR is pushed,
+So that every proposed EKS upgrade is validated before it can be merged.
+ACCEPTANCE CRITERIA
+1. Jenkins pipeline is configured to trigger on PR push to the upgrade automation repo
+2. Validation script runs as a dedicated stage (e.g., Validate Upgrade Checklist)
+3. Jenkins stage consumes the correct checklist version based on the target EKS version in the PR
+4. Pipeline status (pass/fail) is reported back to the PR as a GitHub/GitLab status check
+5. Logs are captured and archived as a Jenkins artifact
+Story 4: Implement Merge Gate — Block or Approve Based on Validation
+Results
+As a platform engineer,
+I want the PR merge to be automatically approved or blocked based on validation script results,
+So that no EKS upgrade proceeds to main unless all checklist gates pass.
+ACCEPTANCE CRITERIA
+1. If all checks pass → PR is automatically approved and merged to main
+2. If any check fails → PR merge is blocked, and a comment is posted on the PR listing the failed checks
+3. Failed PR is not auto-closed — it stays open for remediation
+4. Notifications sent to the team (Slack or email) on both outcomes
+5. Merge gate logic is idempotent — re-pushing after a fix re-triggers validation cleanly
+SUGGESTED ONBOARDING ORDER
+Story 1 → Story 2 → Story 3 → Story 4 is the recommended sequence. Story 1 is ideal as a first solo task — low risk,
+gets your teammate familiar with the repo and the upgrade process context before touching any automation
